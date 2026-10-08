@@ -1,4 +1,4 @@
-from app.routers import auth
+from app.routers import auth, users
 from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -8,6 +8,8 @@ from app.database import get_db
 app = FastAPI(title="AccessiTour API")
 
 app.include_router(auth.router)
+
+app.include_router(users.router)
 
 
 @app.get("/api/v1/health")

@@ -4,8 +4,8 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.models import User
-from app.schemas.user import UserCreate, UserRead
-from app.security import hash_password
+from app.schemas.user import LoginRequest, Token, UserCreate, UserRead
+from app.security import create_access_token, hash_password, verify_password
 
 router = APIRouter(prefix="/api/v1/auth", tags=["auth"])
 
@@ -28,3 +28,10 @@ def register(data: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(user)
     return user
+
+@router.post("/login", response_model=Token)
+def login(data: LoginRequest, db: Session = Depends(get_db)):
+    user = db.scalar(select(User).where(User.email == data.email.lower()))
+    if user is None or not verify_password(data.password, user.hashed_password):
+        raise HTTPException(status_code=401, detail="Incorrect email or password")
+    return Token(access_token=create_access_token(user.id))
