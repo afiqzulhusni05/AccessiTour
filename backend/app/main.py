@@ -1,3 +1,4 @@
+from fastapi.middleware.cors import CORSMiddleware
 from app.routers import auth, users
 from fastapi import Depends, FastAPI
 from sqlalchemy import text
@@ -6,6 +7,13 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 
 app = FastAPI(title="AccessiTour API")
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 app.include_router(auth.router)
 
