@@ -3,3 +3,5 @@ sqlalchemy
 psycopg[binary]
 pydantic-settings
 alembic
+pwdlib[argon2]
+pyjwt
