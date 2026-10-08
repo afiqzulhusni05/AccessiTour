@@ -1,3 +1,4 @@
+from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
 from app.routers import auth, users
 from fastapi import Depends, FastAPI
@@ -18,6 +19,10 @@ app.add_middleware(
 app.include_router(auth.router)
 
 app.include_router(users.router)
+
+@app.get("/", include_in_schema=False)
+def root():
+    return RedirectResponse(url="/docs")
 
 
 @app.get("/api/v1/health")
