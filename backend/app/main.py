@@ -1,11 +1,11 @@
-from fastapi.responses import RedirectResponse
-from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, guides, tourists, users
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.routers import auth, guides, matching, tourists, users
 
 app = FastAPI(title="AccessiTour API")
 
@@ -20,6 +20,8 @@ app.include_router(auth.router)
 app.include_router(users.router)
 app.include_router(tourists.router)
 app.include_router(guides.router)
+app.include_router(matching.router)
+
 
 @app.get("/", include_in_schema=False)
 def root():
