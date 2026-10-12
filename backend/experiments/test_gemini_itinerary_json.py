@@ -294,7 +294,7 @@ The backend will separately handle:
 
 try:
     interaction = client.interactions.create(
-        model="gemini-3.5-flash",
+        model="gemini-3.8-flash",
         input=prompt,
         response_format={
             "type": "text",

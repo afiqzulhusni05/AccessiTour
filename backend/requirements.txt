@@ -5,3 +5,4 @@ pydantic-settings
 alembic
 pwdlib[argon2]
 pyjwt
+google-genai
