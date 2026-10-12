@@ -1,0 +1,6 @@
+full_name,email,gender,description,languages,regions,attributes,accessibility_experience,transport_options,max_group_size,verified,rating_average,rating_count,micro_hourly_rate,micro_min_hours,micro_max_hours,full_day_rate
+Minho,minho.guide@example.com,MALE,Budget-friendly Busan local for food and culture walks.,"ko,en",BUSAN,"FOOD,CULTURE",,PUBLIC_TRANSIT,6,FALSE,4.5,40,15000,2,4,90000
+Jisu,jisu.guide@example.com,FEMALE,Easy-paced Busan tours with plenty of rest stops. First-aid certified.,"ko,en",BUSAN,"FOOD,NATURE","SLOW_WALK_SUPPORT,SENIOR_SUPPORT,FIRST_AID","PUBLIC_TRANSIT,OWN_CAR",4,TRUE,4.9,60,25000,2,4,150000
+Hana,hana.guide@example.com,FEMALE,Japanese-speaking guide for Busan's history and Japanese heritage sites.,"ko,ja,en",BUSAN,"CULTURE,HISTORY,FOOD",,PUBLIC_TRANSIT,6,FALSE,4.7,30,,,,120000
+Sora,sora.guide@example.com,FEMALE,Japanese-speaking history guide for short walking tours.,"ko,ja",BUSAN,"CULTURE,HISTORY",,PUBLIC_TRANSIT,4,FALSE,4.6,25,20000,2,3,
+Yuna,yuna.guide@example.com,FEMALE,Accessible Busan routes for wheelchair users and slow walkers.,"ko,en",BUSAN,"CULTURE,FOOD","WHEELCHAIR_SUPPORT,SLOW_WALK_SUPPORT,FIRST_AID","PUBLIC_TRANSIT,CAN_ARRANGE_CAR",4,TRUE,4.8,50,30000,2,4,160000
