@@ -1,3 +1,4 @@
+import datetime as dt
 from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 from app.enums import (
@@ -75,3 +76,35 @@ class GuideProfileRead(GuideProfileUpdate):
     rating_average: float
     rating_count: int
     services: list[GuideServiceRead] = Field(default_factory=list)
+
+class AvailabilitySlot(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    date: dt.date
+    start_time: dt.time
+    end_time: dt.time
+
+    @model_validator(mode="after")
+    def check_times(self):
+        if self.start_time >= self.end_time:
+            raise ValueError("start_time must be before end_time")
+        return self
+
+
+class AvailabilityUpdate(BaseModel):
+    slots: list[AvailabilitySlot]
+
+    @model_validator(mode="after")
+    def no_overlaps(self):
+        ordered = sorted(self.slots, key=lambda s: (s.date, s.start_time))
+        for earlier, later in zip(ordered, ordered[1:]):
+            if earlier.date == later.date and later.start_time < earlier.end_time:
+                raise ValueError(f"Slots overlap on {later.date}")
+        return self
+
+
+class GuideListPage(BaseModel):
+    items: list[GuideProfileRead]
+    total: int
+    page: int
+    size: int
