@@ -1,6 +1,6 @@
 from fastapi.responses import RedirectResponse
 from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, users, tourists
+from app.routers import auth, guides, tourists, users
 from fastapi import Depends, FastAPI
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -17,10 +17,9 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
-
 app.include_router(users.router)
-
 app.include_router(tourists.router)
+app.include_router(guides.router)
 
 @app.get("/", include_in_schema=False)
 def root():
