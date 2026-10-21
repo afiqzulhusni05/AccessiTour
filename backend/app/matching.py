@@ -336,3 +336,49 @@ def match_guides(
 
     results.sort(key=lambda r: (-r.total_score, r.estimated_price, r.guide.id))
     return results, excluded
+
+
+# ---------- Whole trip (several segments) ----------
+
+
+@dataclass
+class WholeTripResult:
+    guide: GuideCandidate
+    segments_covered: int
+    segments_total: int
+    average_score: float  # segments the guide can't take count as 0
+    total_price: int  # only the segments the guide can take
+    segment_scores: list[float | None]  # one per segment, None if not covered
+
+
+def combine_whole_trip(per_segment: list[list[MatchResult]]) -> list[WholeTripResult]:
+    """Combine each segment's ranked list into one list of guides for the whole trip.
+
+    Guides who can take every segment come first. Guides who can take only some
+    segments are still listed (agreed option B), with 0 for the segments they
+    can't take, so their average is lower.
+    """
+    total = len(per_segment)
+    hits_by_guide: dict[int, dict[int, MatchResult]] = {}
+    for index, results in enumerate(per_segment):
+        for result in results:
+            hits_by_guide.setdefault(result.guide.id, {})[index] = result
+
+    combined = []
+    for hits in hits_by_guide.values():
+        scores = [hits[i].total_score if i in hits else None for i in range(total)]
+        combined.append(
+            WholeTripResult(
+                guide=next(iter(hits.values())).guide,
+                segments_covered=len(hits),
+                segments_total=total,
+                average_score=round(sum(s or 0 for s in scores) / total, 1),
+                total_price=sum(h.estimated_price for h in hits.values()),
+                segment_scores=scores,
+            )
+        )
+
+    combined.sort(
+        key=lambda w: (-w.segments_covered, -w.average_score, w.total_price, w.guide.id)
+    )
+    return combined

@@ -17,6 +17,7 @@ from app.matching import (
     ServiceInfo,
     SegmentRequest,
     TouristNeeds,
+    combine_whole_trip,
     match_guides,
 )
 
@@ -318,3 +319,34 @@ def test_partly_free_guide_gets_partial_availability():
 
     assert availability.score == 0.67
     assert availability.reason == "Free on 2 of 3 days"
+
+
+# ---------- Whole trip ----------
+
+
+def test_whole_trip_puts_full_coverage_first():
+    both = guide(20, "Both", regions=["SEOUL", "BUSAN"], rating_average=4.0, rating_count=5)
+    busan_star = guide(21, "BusanStar", regions=["BUSAN"], rating_average=5.0, rating_count=99)
+    seoul = full_day_in_busan(region="SEOUL")
+    busan = full_day_in_busan(start_date=NOV_4, end_date=NOV_4)
+
+    per_segment = [
+        match_guides(ENGLISH_SPEAKER, seoul, [both, busan_star])[0],
+        match_guides(ENGLISH_SPEAKER, busan, [both, busan_star])[0],
+    ]
+    combined = combine_whole_trip(per_segment)
+
+    assert [w.guide.full_name for w in combined] == ["Both", "BusanStar"]
+    assert combined[0].segments_covered == 2
+    assert combined[1].segments_covered == 1
+    assert combined[1].segment_scores[0] is None  # can't take the Seoul part
+    assert combined[1].average_score == round(combined[1].segment_scores[1] / 2, 1)
+
+
+def test_whole_trip_adds_up_prices_of_covered_segments():
+    both = guide(20, "Both", regions=["SEOUL", "BUSAN"])  # 120,000 a day
+    per_segment = [
+        match_guides(ENGLISH_SPEAKER, full_day_in_busan(region="SEOUL"), [both])[0],
+        match_guides(ENGLISH_SPEAKER, full_day_in_busan(start_date=NOV_4, end_date=NOV_4), [both])[0],
+    ]
+    assert combine_whole_trip(per_segment)[0].total_price == 240000
