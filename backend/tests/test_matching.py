@@ -207,8 +207,9 @@ def test_not_free_is_excluded():
     results, excluded = match_guides(ENGLISH_SPEAKER, segment, ALL_GUIDES)
 
     assert results == []
-    assert all(e.reason == "Not free at the requested time" or "Does not offer" in e.reason
-               for e in excluded)
+    assert all(
+        e.reason.startswith("Not free") or "Does not" in e.reason for e in excluded
+    )
 
 
 def test_micro_must_fit_inside_free_hours():
@@ -219,7 +220,7 @@ def test_micro_must_fit_inside_free_hours():
     results, excluded = match_guides(ENGLISH_SPEAKER, segment, [morning_only])
 
     assert results == []
-    assert excluded[0].reason == "Not free at the requested time"
+    assert excluded[0].reason == "Not free 14:00 to 16:00 on 03 Nov"
 
 
 def test_micro_hours_outside_guide_range_is_excluded():
@@ -232,13 +233,29 @@ def test_micro_hours_outside_guide_range_is_excluded():
     assert "hour bookings" in excluded[0].reason
 
 
-def test_wrong_region_still_ranked_but_lower():
-    results, _ = match_guides(ENGLISH_SPEAKER, full_day_in_busan(), ALL_GUIDES)
+def test_wrong_region_is_excluded():
+    results, excluded = match_guides(ENGLISH_SPEAKER, full_day_in_busan(), ALL_GUIDES)
 
-    # Scored, not filtered: shown, but at the bottom with 0 region points
-    assert names(results)[-1] == "Seojun"
-    region = next(f for f in results[-1].breakdown if f.factor == "region")
-    assert region.points == 0
+    # A Seoul-only guide never appears in Busan results
+    assert "Seojun" not in names(results)
+    seojun = next(e for e in excluded if e.guide.full_name == "Seojun")
+    assert seojun.reason == "Does not work in Busan"
+
+
+def test_region_is_not_a_scored_factor():
+    results, _ = match_guides(ENGLISH_SPEAKER, full_day_in_busan(), ALL_GUIDES)
+    factors = [f.factor for f in results[0].breakdown]
+
+    assert "region" not in factors
+    assert sum(f.weight for f in results[0].breakdown) == 100
+
+
+def test_guide_in_several_regions_appears_in_each():
+    both_cities = guide(12, "Both", regions=["SEOUL", "BUSAN"])
+    seoul = full_day_in_busan(region="SEOUL")
+    for segment in (full_day_in_busan(), seoul):
+        results, _ = match_guides(ENGLISH_SPEAKER, segment, [both_cities])
+        assert names(results) == ["Both"]
 
 
 # ---------- Individual factors ----------
@@ -272,6 +289,7 @@ def test_private_transport_and_gender_count_as_needs():
 
     assert needs["Jisu"].score == 1.0  # female, has a car
     assert needs["Minho"].score == 0.0  # male, no car
+    assert needs["Minho"].reason == "No private transport, not a female guide"
 
 
 def test_no_budget_gives_full_price_score():

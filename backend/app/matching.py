@@ -6,6 +6,7 @@ the dataclasses below, and calls match_guides().
 
 How it works:
 1. Exclude guides who cannot take the booking at all:
+   - do not work in the requested region
    - not free on any requested day (or not free for the requested hours)
    - do not offer the requested service type, or not for that many hours
    - the group is larger than their maximum group size
@@ -26,13 +27,14 @@ from app.enums import (
     TransportPreference,
 )
 
-# Agreed by the team. They add up to 100 and can be tuned during testing.
+# They add up to 100 and can be tuned during testing.
+# Region is not scored: guides outside the requested region are excluded instead,
+# and its former 20 points went to language, needs and specialities.
 WEIGHTS = {
-    "region": 20,
-    "language": 20,
+    "language": 25,
     "availability": 15,
-    "needs": 15,
-    "specialities": 10,
+    "needs": 25,
+    "specialities": 15,
     "price": 10,
     "rating": 10,
 }
@@ -166,6 +168,9 @@ def estimate_price(service: ServiceInfo, segment: SegmentRequest) -> int:
 
 
 def exclusion_reason(guide: GuideCandidate, segment: SegmentRequest) -> str | None:
+    if segment.region not in guide.regions:
+        return f"Does not work in {segment.region.title()}"
+
     service = guide.services.get(segment.service_type)
     if service is None:
         return f"Does not offer {segment.service_type.value}"
@@ -182,18 +187,17 @@ def exclusion_reason(guide: GuideCandidate, segment: SegmentRequest) -> str | No
         return f"Takes groups of up to {guide.max_group_size}, requested {segment.group_size}"
 
     if not free_days(guide, segment):
-        return "Not free at the requested time"
+        if segment.service_type == ServiceType.MICRO:
+            return (
+                f"Not free {segment.start_time:%H:%M} to {segment.end_time:%H:%M} "
+                f"on {segment.start_date:%d %b}"
+            )
+        return f"Not free for a full day ({FULL_DAY_MIN_HOURS}+ hours) on the requested dates"
 
     return None
 
 
 # ---------- Factor scores (each returns a score from 0 to 1 and a reason) ----------
-
-
-def score_region(guide: GuideCandidate, segment: SegmentRequest) -> tuple[float, str]:
-    if segment.region in guide.regions:
-        return 1.0, f"Works in {segment.region.title()}"
-    return 0.0, f"Does not work in {segment.region.title()}"
 
 
 def score_language(guide: GuideCandidate, tourist: TouristNeeds) -> tuple[float, str]:
@@ -216,11 +220,12 @@ def score_availability(guide: GuideCandidate, segment: SegmentRequest) -> tuple[
 def score_needs(
     guide: GuideCandidate, tourist: TouristNeeds, segment: SegmentRequest
 ) -> tuple[float, str]:
-    checks: list[tuple[bool, str]] = []
+    # Each check: (met?, text when met, text when not met)
+    checks: list[tuple[bool, str, str]] = []
 
     if tourist.mobility_level == MobilityLevel.WHEELCHAIR:
         ok = AccessibilityExperience.WHEELCHAIR_SUPPORT.value in guide.accessibility_experience
-        checks.append((ok, "wheelchair support"))
+        checks.append((ok, "wheelchair support", "no wheelchair support"))
     elif tourist.mobility_level == MobilityLevel.SLOW_WALK:
         ok = any(
             tag in guide.accessibility_experience
@@ -229,7 +234,7 @@ def score_needs(
                 AccessibilityExperience.WHEELCHAIR_SUPPORT.value,
             )
         )
-        checks.append((ok, "slow walking support"))
+        checks.append((ok, "slow walking support", "no slow walking support"))
 
     if segment.transport_preference == TransportPreference.PRIVATE:
         ok = any(
@@ -239,23 +244,20 @@ def score_needs(
                 TransportOption.CAN_ARRANGE_CAR.value,
             )
         )
-        checks.append((ok, "private transport"))
+        checks.append((ok, "private transport", "no private transport"))
 
     if tourist.gender_preference != GenderPreference.NO_PREFERENCE:
+        wanted = tourist.gender_preference.value.lower()
         ok = guide.gender == tourist.gender_preference.value
-        checks.append((ok, f"{tourist.gender_preference.value.lower()} guide"))
+        checks.append((ok, f"{wanted} guide", f"not a {wanted} guide"))
 
     if not checks:
         return 1.0, "No special needs requested"
 
-    met = [label for ok, label in checks if ok]
-    missing = [label for ok, label in checks if not ok]
-    parts = []
-    if met:
-        parts.append("Has " + ", ".join(met))
-    if missing:
-        parts.append("No " + ", ".join(missing))
-    return len(met) / len(checks), "; ".join(parts)
+    met = sum(1 for ok, _, _ in checks if ok)
+    parts = [met_text if ok else missing_text for ok, met_text, missing_text in checks]
+    reason = ", ".join(parts)
+    return met / len(checks), reason[0].upper() + reason[1:]
 
 
 def score_specialities(guide: GuideCandidate, segment: SegmentRequest) -> tuple[float, str]:
@@ -309,7 +311,6 @@ def match_guides(
 
         price = estimate_price(guide.services[segment.service_type], segment)
         scores = {
-            "region": score_region(guide, segment),
             "language": score_language(guide, tourist),
             "availability": score_availability(guide, segment),
             "needs": score_needs(guide, tourist, segment),
