@@ -28,7 +28,5 @@ export default defineConfig({
       workbox: { navigateFallback: "/index.html" },
     }),
   ],
-  // "/api" forwards to the local backend, so a phone on the same Wi-Fi only needs to reach this dev server
-  // (see "dev:phone" in package.json). Normal development still calls http://localhost:8000 directly.
-  server: { port: 5173, proxy: { "/api": { target: "http://localhost:8000", rewrite: (path) => path.replace(/^\/api/, "") } } },
+  server: { port: 5173 },
 });

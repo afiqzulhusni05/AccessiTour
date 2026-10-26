@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { decideBooking } from "./api";
+import { ApiError, decideBooking } from "./api";
 import { useLocalized } from "./names";
 import type { AccountRole, Booking } from "./types";
 
@@ -26,8 +26,8 @@ export default function BookingList({ bookings, viewer, onChange }: {
     setErr("");
     try {
       onChange(await decideBooking(b.id, action));
-    } catch {
-      setErr(t("booking.failed"));
+    } catch (e) {
+      setErr(e instanceof ApiError && e.detail ? e.detail : t("booking.failed"));
       onChange(null);
     } finally {
       setBusy(null);
@@ -53,18 +53,24 @@ export default function BookingList({ bookings, viewer, onChange }: {
                 <span className={"state " + b.status}>{t(`booking.status.${b.status}`)}</span>
               </div>
               <p className="muted">
-                {p.start_date} – {p.end_date} · {t("booking.match", { pct: Math.round(b.score * 100) })}
+                {p.start_date} – {p.end_date}
+                {b.score !== null && ` · ${t("booking.match", { pct: Math.round(b.score * 100) })}`}
+                {b.team && ` · ₩${b.team.total_price.toLocaleString()}`}
                 {viewer === "admin" && ` · ${guide}`}
               </p>
               <details>
                 <summary>{t("booking.details")}</summary>
                 <dl className="facts">
                   <dt>{t("trip.party")}</dt><dd>{p.party_size}</dd>
-                  <dt>{t("trip.budget")}</dt><dd>₩{p.budget_per_day.toLocaleString()}</dd>
+                  {b.team
+                    ? <><dt>{t("booking.fee")}</dt><dd>₩{b.team.total_price.toLocaleString()}</dd></>
+                    : <><dt>{t("trip.budget")}</dt><dd>₩{p.budget_per_day.toLocaleString()}</dd></>}
                   <dt>{t("trip.language")}</dt><dd>{list(p.languages, "lang")}</dd>
                   <dt>{t("needs.mobility")}</dt><dd>{(t(`mobility.${p.mobility}`) as unknown as string[])[0]}</dd>
-                  <dt>{t("needs.interests")}</dt><dd>{list(p.interests, "interest")}</dd>
-                  <dt>{t("needs.dietary")}</dt><dd>{list(p.dietary, "diet")}</dd>
+                  {!b.team && <>
+                    <dt>{t("needs.interests")}</dt><dd>{list(p.interests, "interest")}</dd>
+                    <dt>{t("needs.dietary")}</dt><dd>{list(p.dietary, "diet")}</dd>
+                  </>}
                 </dl>
               </details>
               <div className="rowbtns">
@@ -73,6 +79,9 @@ export default function BookingList({ bookings, viewer, onChange }: {
                     <button type="button" className="primary small" disabled={working} onClick={() => act(b, "accept")} aria-label={`${t("booking.accept")}: ${b.owner_name}`}>{t("booking.accept")}</button>
                     <button type="button" className="ghost small danger" disabled={working} onClick={() => act(b, "decline")} aria-label={`${t("booking.decline")}: ${b.owner_name}`}>{t("booking.decline")}</button>
                   </>
+                )}
+                {b.team && b.status === "accepted" && (
+                  <button type="button" className="ghost small danger" disabled={working} onClick={() => act(b, "cancel")}>{t("booking.cancelBooking")}</button>
                 )}
                 {b.status === "pending" && viewer !== "guide" && (
                   <button type="button" className="ghost small danger" disabled={working} onClick={() => act(b, "cancel")}>{t("booking.cancel")}</button>

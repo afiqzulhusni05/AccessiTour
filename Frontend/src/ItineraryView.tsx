@@ -78,7 +78,7 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
           : next === "on_the_way" && i.progress === "on_the_way" ? { ...i, progress: "upcoming" as const } : i),
     });
     try {
-      onChange(await setStopProgress(it.id, item.id, next));
+      onChange(await setStopProgress(it, item.id, next));
     } catch {
       onChange(before);
       setMsg(t("progress.failed", { place: item.place_name }));
@@ -113,7 +113,7 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
 
       <p role="alert" className="error sticky">{msg}</p>
 
-      <TripMap itinerary={it} editable={editable} busy={busy} onAdd={(f) => run(() => addStop(it.id, f))} />
+      <TripMap itinerary={it} editable={editable} busy={busy} onAdd={(f) => run(() => addStop(it, f))} />
 
       <NavSettings prefs={nav} onChange={setNav} hasNeeds={it.trip.mobility !== "normal"} />
 
@@ -154,10 +154,10 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
               {items.map((item, n) => (show !== "all" && item.progress !== show) ? null : (
                 <Stop
                   key={item.id} item={item} prev={items[n - 1]} next={items[n + 1]} nav={nav} near={t(`region.${it.trip.region}`)} days={it.days} editable={editable} isGuide={role === "guide"} canComment={role !== null} busy={busy}
-                  onSave={(f, version) => run(() => updateStop(it.id, { ...item, version }, f))}
-                  onDelete={() => run(() => deleteStop(it.id, item.id))}
-                  onCheck={() => run(() => updateStop(it.id, item, { accessibility_checked: true }))}
-                  onComment={(body) => run(() => addComment(it.id, item.id, body))}
+                  onSave={(f, version) => run(() => updateStop(it, { ...item, version }, f))}
+                  onDelete={() => run(() => deleteStop(it, item.id))}
+                  onCheck={() => run(() => updateStop(it, item, { accessibility_checked: true }))}
+                  onComment={(body) => run(() => addComment(it, item.id, body))}
                   onProgress={(next) => track(item, next)}
                 />
               ))}
@@ -166,14 +166,14 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
               <StopForm
                 initial={{ day_number: day, start_time: "12:00", place_name: "", activity: "" }}
                 days={it.days} submitLabel={t("collab.addSave")} busy={busy}
-                onSubmit={async (f) => (await run(() => addStop(it.id, f))) && setAddingTo(null)}
+                onSubmit={async (f) => (await run(() => addStop(it, f))) && setAddingTo(null)}
                 onCancel={() => setAddingTo(null)}
               />
             )}
             {editable && mealFor?.day === day && (
               <MealPicker
                 key={mealFor.meal} itinerary={it} day={day} meal={mealFor.meal} busy={busy}
-                onAdd={async (f) => (await run(() => addStop(it.id, f))) && setMealFor(null)}
+                onAdd={async (f) => (await run(() => addStop(it, f))) && setMealFor(null)}
                 onCancel={() => setMealFor(null)}
               />
             )}
@@ -184,7 +184,7 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
       <Chat
         itineraryId={it.id} messages={it.messages} role={role} busy={busy}
         other={role === "guide" ? t("collab.traveller") : guideName}
-        onSend={(body) => run(() => sendMessage(it.id, body))}
+        onSend={(body) => run(() => sendMessage(it, body))}
       />
 
       <div className="approval">
@@ -199,7 +199,7 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
           <>
             <button
               type="button" className="primary" disabled={busy || (role === "guide" && checksOpen)}
-              onClick={async () => (await run(() => approveItinerary(it.id))) && setReopened(false)}
+              onClick={async () => (await run(() => approveItinerary(it))) && setReopened(false)}
             >
               {t("collab.approve", { who: t(`collab.role.${role}`) })}
             </button>

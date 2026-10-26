@@ -48,6 +48,11 @@ class ItineraryItem(Base):
     edited_by: Mapped[EditedBy] = mapped_column(
         pg_enum(EditedBy, "edited_by"), default=EditedBy.AI
     )
+    # Used while travelling and by the app's stop list. Plain strings, checked in schemas/itineraries.py.
+    progress: Mapped[str] = mapped_column(String(20), default="UPCOMING", server_default="UPCOMING")
+    transport: Mapped[str | None] = mapped_column(String(20))  # how the tourist gets to this stop
+    meal: Mapped[str | None] = mapped_column(String(10))  # LUNCH or DINNER when the stop is a restaurant
+    needs_accessibility_check: Mapped[bool] = mapped_column(Boolean, default=False, server_default="false")
 
 
 class ItineraryComment(Base):

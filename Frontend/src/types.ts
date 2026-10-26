@@ -14,6 +14,7 @@ export interface TouristProfile {
   religious: string[];
   notes: string;
   plan_id?: number | null; // set when this city is one leg of a multi-city trip
+  team_booking_id?: number | null; // set when the trip was booked through the team API
 }
 
 /** One city of a multi-city trip. Dates are YYYY-MM-DD: arrival and departure. */
@@ -86,12 +87,13 @@ export interface ItineraryItem {
 
 export interface Itinerary {
   id: number;
+  booking_id?: number;
   owner_name: string; // the tourist who created it
   guide_id: number;
   guide_name: string;
   guide_name_ko: string;
   trip: TouristProfile;
-  source: "ai" | "sample"; // "sample" = backend had no LLM available
+  source: "ai" | "sample" | "plan"; // "plan" = written by the tourist and guide (no AI draft)
   days: number;
   accessibility_review: boolean;
   approved_by_tourist: boolean;
@@ -192,7 +194,7 @@ export interface TripPreferences {
   party_size: number; // still sent by the API but not used: travellers are chosen per trip
 }
 
-export type BookingStatus = "pending" | "accepted" | "declined" | "cancelled";
+export type BookingStatus = "pending" | "accepted" | "declined" | "cancelled" | "completed";
 
 export interface Booking {
   id: number;
@@ -202,9 +204,11 @@ export interface Booking {
   guide_name: string;
   guide_name_ko: string;
   trip: TouristProfile;
-  score: number; // match score when the request was sent, 0..1
+  score: number | null; // match score when the request was sent, 0..1; null for team-API bookings
   created_at: string;
   itinerary_id: number | null; // set once the guide accepts
+  /** Set for a booking made in the team API: the trip segment it is for, and the guide's quoted fee. */
+  team?: { trip_id: number; segment_id: number; total_price: number };
 }
 
 /** One guide search, for the admin's matching activity view. */

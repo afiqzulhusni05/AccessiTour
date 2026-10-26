@@ -102,7 +102,7 @@ export default function TripMap({ itinerary: it, editable, busy, onAdd }: {
     const b = map.current!.getBounds();
     setRecState("loading");
     try {
-      setRecs(await getRecommendations(it.id, { south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast() }));
+      setRecs(await getRecommendations(it, { south: b.getSouth(), west: b.getWest(), north: b.getNorth(), east: b.getEast() }));
       setRecState("idle");
     } catch {
       setRecState("error");
