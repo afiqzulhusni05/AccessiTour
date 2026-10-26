@@ -5,7 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.database import get_db
-from app.routers import auth, guides, matching, tourists, trips, users
+from app.routers import auth, bookings, guides, matching, tourists, trips, users
 
 app = FastAPI(title="AccessiTour API")
 
@@ -22,6 +22,7 @@ app.include_router(tourists.router)
 app.include_router(guides.router)
 app.include_router(matching.router)
 app.include_router(trips.router)
+app.include_router(bookings.router)
 
 
 @app.get("/", include_in_schema=False)

@@ -382,3 +382,51 @@ def combine_whole_trip(per_segment: list[list[MatchResult]]) -> list[WholeTripRe
         key=lambda w: (-w.segments_covered, -w.average_score, w.total_price, w.guide.id)
     )
     return combined
+
+
+# ---------- Bookings ----------
+
+
+def remove_booked(
+    availability: list[tuple[dt.date, dt.time, dt.time]],
+    booked: list[tuple[dt.date, dt.time | None, dt.time | None]],
+) -> list[tuple[dt.date, dt.time, dt.time]]:
+    """Take a guide's booked time out of their free slots.
+
+    A booked entry with no times is a full-day booking and blocks the whole day.
+    A MICRO booking cuts its hours out of the slot, which can split it in two.
+    """
+    booked_by_day: dict[dt.date, list] = {}
+    for day, start, end in booked:
+        booked_by_day.setdefault(day, []).append((start, end))
+
+    result = []
+    for day, slot_start, slot_end in availability:
+        pieces = [(slot_start, slot_end)]
+        for b_start, b_end in booked_by_day.get(day, []):
+            if b_start is None:  # full day booked
+                pieces = []
+                break
+            remaining = []
+            for start, end in pieces:
+                if b_end <= start or b_start >= end:  # no overlap
+                    remaining.append((start, end))
+                    continue
+                if start < b_start:
+                    remaining.append((start, b_start))
+                if b_end < end:
+                    remaining.append((b_end, end))
+            pieces = remaining
+        result.extend((day, start, end) for start, end in pieces)
+    return result
+
+
+def bookings_overlap(a, b) -> bool:
+    """Whether two bookings (anything with start_date, end_date, start_time,
+    end_time and service_type) need the guide at the same time."""
+    if a.start_date > b.end_date or b.start_date > a.end_date:
+        return False
+    both_micro = a.service_type == ServiceType.MICRO and b.service_type == ServiceType.MICRO
+    if both_micro:
+        return a.start_time < b.end_time and b.start_time < a.end_time
+    return True  # a full day on a shared date always clashes

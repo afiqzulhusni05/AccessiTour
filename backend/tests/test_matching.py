@@ -350,3 +350,73 @@ def test_whole_trip_adds_up_prices_of_covered_segments():
         match_guides(ENGLISH_SPEAKER, full_day_in_busan(start_date=NOV_4, end_date=NOV_4), [both])[0],
     ]
     assert combine_whole_trip(per_segment)[0].total_price == 240000
+
+
+# ---------- Bookings ----------
+
+from types import SimpleNamespace
+
+from app.matching import bookings_overlap, remove_booked
+
+
+def test_full_day_booking_removes_the_whole_day():
+    free = full_days(NOV_3, NOV_4)
+    assert remove_booked(free, [(NOV_3, None, None)]) == full_days(NOV_4)
+
+
+def test_micro_booking_splits_a_slot():
+    free = [(NOV_3, dt.time(9), dt.time(18))]
+    booked = [(NOV_3, dt.time(12), dt.time(14))]
+    assert remove_booked(free, booked) == [
+        (NOV_3, dt.time(9), dt.time(12)),
+        (NOV_3, dt.time(14), dt.time(18)),
+    ]
+
+
+def test_booked_guide_is_no_longer_free_for_a_full_day():
+    # 9 to 18 minus 11 to 14 leaves 2 and 4 hours, both under 6
+    free = remove_booked(full_days(NOV_3), [(NOV_3, dt.time(11), dt.time(14))])
+    request = SegmentRequest(
+        region="BUSAN",
+        service_type=ServiceType.FULL_DAY,
+        start_date=NOV_3,
+        end_date=NOV_3,
+        start_time=None,
+        end_time=None,
+        group_size=1,
+        transport_preference=TransportPreference.NO_PREFERENCE,
+        attributes=[],
+        budget=None,
+    )
+    tourist = TouristNeeds(
+        preferred_language="en",
+        languages=["en"],
+        mobility_level=MobilityLevel.NORMAL,
+        gender_preference=GenderPreference.NO_PREFERENCE,
+    )
+    results, excluded = match_guides(tourist, request, [guide(1, "Jisu", availability=free)])
+    assert results == []
+    assert "Not free for a full day" in excluded[0].reason
+
+
+def booking(service_type, day, start=None, end=None, end_day=None):
+    return SimpleNamespace(
+        service_type=service_type,
+        start_date=day,
+        end_date=end_day or day,
+        start_time=start,
+        end_time=end,
+    )
+
+
+def test_two_micro_bookings_at_different_times_do_not_clash():
+    morning = booking(ServiceType.MICRO, NOV_3, dt.time(9), dt.time(12))
+    afternoon = booking(ServiceType.MICRO, NOV_3, dt.time(12), dt.time(15))
+    assert not bookings_overlap(morning, afternoon)
+
+
+def test_full_day_clashes_with_anything_on_the_same_date():
+    trip = booking(ServiceType.FULL_DAY, NOV_3, end_day=NOV_5)
+    micro = booking(ServiceType.MICRO, NOV_4, dt.time(9), dt.time(11))
+    assert bookings_overlap(trip, micro)
+    assert not bookings_overlap(trip, booking(ServiceType.FULL_DAY, dt.date(2026, 11, 6)))
