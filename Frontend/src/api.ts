@@ -184,8 +184,13 @@ function stopOut(it: Itinerary, f: Partial<StopFields>, current?: ItineraryItem)
   return out;
 }
 
+/** [] while the server has no itinerary endpoints yet (the deployed API before feature/itinerary-endpoints). */
+const noneIfMissing = <T,>(e: unknown, empty: T): T => {
+  if (e instanceof ApiError && e.status === 404) return empty;
+  throw e;
+};
 export const listItineraries = () => authed(async (tok): Promise<ItinerarySummary[]> =>
-  (await team.listItineraries(tok)).map((x) => ({
+  (await team.listItineraries(tok).catch((e) => noneIfMissing(e, []))).map((x) => ({
     id: x.id, plan_id: null, team_booking_id: x.booking_id, guide_name: x.guide_name, guide_name_ko: "",
     owner_name: x.tourist_name, region: x.region.toLowerCase(), start_date: x.start_date, end_date: x.end_date,
     stops: x.stops, approved_by_tourist: x.approved_by_tourist, approved_by_guide: x.approved_by_guide,
