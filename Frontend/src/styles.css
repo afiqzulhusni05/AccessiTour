@@ -296,7 +296,7 @@ a.blocklink { display: block; color: inherit; text-decoration: none; border: 2px
 .resultbar > p { margin: 0 0 .6rem auto; }
 .reasons { list-style: none; padding: 0; margin: .6rem 0 0; display: grid; gap: .15rem; font-size: .92rem; }
 .reasons li { display: grid; grid-template-columns: 1.1rem 1fr; }
-.reasons .good span { color: #1e7a3c; font-weight: 700; }
+.reasons .good > span:first-child { color: #1e7a3c; font-weight: 700; }
 .reasons .weak { color: var(--muted); }
 .sampletag { margin-left: .5rem; padding: .1rem .45rem; border: 1px solid var(--muted); border-radius: 4px; font-size: .75rem; font-weight: 600; color: var(--muted); vertical-align: middle; white-space: nowrap; }
 .scorenote, .footnote { color: var(--muted); font-size: .85rem; margin: .6rem 0 0; }
@@ -422,3 +422,15 @@ ol.plain { margin: 0; padding-left: 1.2rem; font-weight: 600; }
 .msel-list li[role="option"]:hover, .msel-list li.active { background: var(--mist); }
 .msel-list li[aria-selected="true"] { font-weight: 650; }
 .msel-list li[role="presentation"] { display: block; cursor: default; padding: .6rem; }
+
+/* Team trips: guide cards with the matcher's reasons, left-out guides, availability list */
+.teamguide .score { display: grid; gap: .4rem; align-content: start; }
+.teamguide h3 { margin: 0; }
+.reasons strong { font-weight: 600; }
+.excluded { margin-top: 1rem; }
+.excluded summary { cursor: pointer; color: var(--harbor); font-weight: 600; }
+.excluded ul { margin: .5rem 0 0; padding-left: 1.2rem; font-size: .92rem; }
+.citytabs [role="tab"] small { font-weight: 400; }
+.slots { list-style: none; padding: 0; margin: .5rem 0; display: grid; gap: .3rem; }
+.slots li { display: grid; grid-template-columns: 1fr auto auto; gap: 1rem; align-items: center; padding: .4rem .6rem; background: #fff; border: 1.5px solid var(--mist); border-radius: 6px; }
+@media (max-width: 30rem) { .slots li { grid-template-columns: 1fr auto; } .slots li span:first-child { grid-column: 1 / -1; } }

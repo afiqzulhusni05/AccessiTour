@@ -30,13 +30,9 @@ const MENU: Record<AccountRole, [string, string, keyof typeof ICONS, boolean][]>
   ],
   guide: [
     ["/", "nav.dashboard", "home", true], ["/bookings", "nav.requests", "calendar", false],
-    ["/trips", "nav.trips", "map", false], ["/profile", "nav.profile", "user", false],
+    ["/trips", "nav.trips", "map", false], ["/availability", "nav.availability", "calendar", false], ["/profile", "nav.profile", "user", false],
   ],
-  admin: [
-    ["/admin", "nav.dashboard", "home", true], ["/admin/users", "nav.users", "users", false],
-    ["/admin/guides", "nav.guides", "user", false], ["/bookings", "nav.bookings", "calendar", false],
-    ["/admin/itineraries", "nav.itineraries", "map", false],
-  ],
+  admin: [], // the team API has no admin accounts
 };
 
 /** Layout for signed-in pages: sidebar menu for the account's role, top bar with the account and language. */

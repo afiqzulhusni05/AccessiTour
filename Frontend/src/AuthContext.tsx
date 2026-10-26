@@ -11,8 +11,6 @@ interface Ctx {
   signup: (req: SignupRequest) => Promise<User>;
   logout: () => void;
   refresh: () => Promise<void>;
-  /** The account changed here (name or email edited): use the server's new copy. */
-  setAccount: (user: User) => void;
 }
 const AuthCtx = createContext<Ctx>(null!);
 
@@ -24,23 +22,21 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (api.hasToken()) api.getMe().then(setUser).catch(() => { api.setToken(null); setUser(null); });
   }, []);
 
-  const start = useCallback(async (session: Promise<api.SignedIn>) => {
-    const { token, source, user } = await session;
-    api.setToken(token, source);
+  const start = useCallback(async (session: Promise<api.Session>) => {
+    const { user } = await session; // api.login and api.signup keep the token
     setUser(user);
     return user;
   }, []);
   /** Re-reads the account, after something about it changed (a guide saved their profile). */
-  const refresh = useCallback(() => api.syncMe().then(setUser).catch(() => {}), []);
+  const refresh = useCallback(() => api.getMe().then(setUser).catch(() => {}), []);
 
   const login = useCallback((email: string, password: string) => start(api.login(email, password)), [start]);
   const signup = useCallback((req: SignupRequest) => start(api.signup(req)), [start]);
   const logout = useCallback(() => {
-    api.logout().catch(() => {}); // the local sign-out below happens either way
-    api.setToken(null);
+    api.setToken(null); // the team API's tokens simply expire; nothing to tell the server
     setUser(null);
   }, []);
 
-  return <AuthCtx.Provider value={{ user, login, signup, logout, refresh, setAccount: setUser }}>{children}</AuthCtx.Provider>;
+  return <AuthCtx.Provider value={{ user, login, signup, logout, refresh }}>{children}</AuthCtx.Provider>;
 }
 export const useAuth = () => useContext(AuthCtx);

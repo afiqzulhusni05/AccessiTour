@@ -1,30 +1,27 @@
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { listBookings, listGuides, listItineraries } from "../api";
+import { getGuideProfile, listBookings, listItineraries } from "../api";
 import BookingList from "../BookingList";
 import { useAuth } from "../AuthContext";
 import { Loading, Panel, Tile } from "../Dash";
-import { useLocalized } from "../names";
 import TripList from "../TripList";
 import { useLoad } from "../useLoad";
 
 export default function GuideHome() {
   const { t } = useTranslation();
-  const loc = useLocalized();
   const user = useAuth().user!;
-  const load = () => Promise.all([listItineraries(), listGuides(), listBookings()]);
+  const load = () => Promise.all([listItineraries(), getGuideProfile(), listBookings()]);
   const { data, setData, failed } = useLoad(load);
   if (!data) return <div className="page full"><Loading failed={failed} /></div>;
 
-  const [trips, guides, bookings] = data;
+  const [trips, me, bookings] = data;
   const pending = bookings.filter((b) => b.status === "pending");
   const reload = () => load().then(setData).catch(() => {});
-  const me = guides.find((g) => g.id === user.guide_id);
   const list = (xs: string[], ns: string) => xs.map((x) => t(`${ns}.${x}`)).join(", ") || "–";
 
   return (
     <div className="page full">
-      <h1>{t("dash.welcome", { name: me ? loc(me.name, me.name_ko) : user.display_name })}</h1>
+      <h1>{t("dash.welcome", { name: user.display_name })}</h1>
       <div className="kpis">
         <Tile label={t("booking.pending")} value={pending.length} to="/bookings?status=pending" />
         <Tile label={t("dash.assigned")} value={trips.length} to="/trips" />
@@ -51,8 +48,6 @@ export default function GuideHome() {
               <dt>{t("dash.rate")}</dt><dd>₩{me.daily_rate.toLocaleString()}</dd>
               <dt>{t("dash.specialities")}</dt><dd>{list(me.interests, "interest")}</dd>
               <dt>{t("factor.accessibility")}</dt><dd>{list(me.access_tags, "tag")}</dd>
-              <dt>{t("dash.rating")}</dt>
-              <dd>{me.review_count ? `★ ${me.rating.toFixed(1)} (${me.review_count} ${t("results.reviews")})` : t("results.newGuide")}</dd>
             </dl>
             </Link>
           )}

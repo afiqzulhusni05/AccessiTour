@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { createPlan, getPreferences } from "../api";
+import { ApiError, getPreferences, teamToken } from "../api";
+import * as team from "../teamApi";
 import { checkLegs, MAX_LEGS, moveLeg, stayDays } from "../multiCity";
 import MultiSelect from "../MultiSelect";
-import { useProfile } from "../ProfileContext";
 import { CITIES, PROVINCES } from "../regions";
-import { DIETARY, INTERESTS, LANGS, MOBILITY } from "../options";
+import { DIETARY, GUIDE_INTERESTS, LANGS, MOBILITY } from "../options";
 import type { TouristProfile, TripLeg } from "../types";
 
 
@@ -28,10 +28,12 @@ const defaults = (): TouristProfile => ({
 export default function ProfilePage() {
   const { t, i18n } = useTranslation();
   const nav = useNavigate();
-  const { profile, setProfile } = useProfile();
-  const [p, setP] = useState<TouristProfile>(profile ?? defaults());
+  const [p, setP] = useState<TouristProfile>(defaults());
   // The cities, in visiting order. With one city its dates are simply the trip's dates.
-  const [legs, setLegs] = useState<TripLeg[]>([{ region: (profile ?? defaults()).region, start_date: "", end_date: "" }]);
+  // The team API only knows Seoul, Busan and Jeju, and its own list of interests.
+  const cities = CITIES.filter((c) => team.TEAM_REGIONS.includes(c.id));
+  const firstRegion = defaults().region;
+  const [legs, setLegs] = useState<TripLeg[]>([{ region: cities.some((c) => c.id === firstRegion) ? firstRegion : "seoul", start_date: "", end_date: "" }]);
   const [cityText, setCityText] = useState("");
   const [adding, setAdding] = useState(false); // the city search box is open
   const [busy, setBusy] = useState(false);
@@ -46,14 +48,13 @@ export default function ProfilePage() {
 
   // A new trip starts from the saved preferences, unless the traveller has already begun typing.
   useEffect(() => {
-    if (profile) return;
     let live = true;
     getPreferences()
       // the number of travellers belongs to each trip, not to the saved profile
       .then(({ party_size: _, ...prefs }) => live && !touched.current && setP((prev) => ({ ...prev, ...prefs })))
       .catch(() => {});
     return () => { live = false; };
-  }, [profile]);
+  }, []);
   const steps = t("steps") as unknown as string[];
 
   const setLeg = (i: number, changes: Partial<TripLeg>) => {
@@ -65,8 +66,8 @@ export default function ProfilePage() {
   const addCity = () => {
     const typed = cityText.trim().toLowerCase();
     if (!typed) return;
-    const city = CITIES.find((c) => c.en.toLowerCase() === typed || c.ko === typed)
-      ?? CITIES.filter((c) => c.en.toLowerCase().startsWith(typed) || c.ko.startsWith(typed)).find((_, __, all) => all.length === 1);
+    const city = cities.find((c) => c.en.toLowerCase() === typed || c.ko === typed)
+      ?? cities.filter((c) => c.en.toLowerCase().startsWith(typed) || c.ko.startsWith(typed)).find((_, __, all) => all.length === 1);
     if (!city) return setErr(t("multi.unknownCity"));
     if (legs.some((leg) => leg.region === city.id)) return setErr(t("multi.duplicate", { city: t(`region.${city.id}`) }));
     if (legs.length >= MAX_LEGS) return setErr(t("multi.tooMany", { max: MAX_LEGS }));
@@ -87,26 +88,36 @@ export default function ProfilePage() {
       if (p.end_date < p.start_date) return setErr(t("err.dates"));
       const bad = multi ? checkLegs(legs, p.start_date, p.end_date) : null;
       if (bad) return setErr(t(`multi.err.${bad[1]}`, { city: t(`region.${legs[bad[0]].region}`), prev: bad[0] ? t(`region.${legs[bad[0] - 1].region}`) : "" }));
+      const long = stays().find((leg) => stayDays(leg) > team.MAX_SEGMENT_DAYS);
+      if (long) return setErr(t("multi.err.tooLong", { city: t(`region.${long.region}`), max: team.MAX_SEGMENT_DAYS }));
       if (!(p.budget_per_day > 0)) return setErr(t("err.budget"));
       if (p.languages.length === 0) return setErr(t("err.language"));
     }
     setErr("");
     setStep(step + 1);
   };
+  /** The cities with their dates; one city simply takes the trip's dates. */
+  const stays = (): TripLeg[] => (multi ? legs : [{ ...legs[0], start_date: p.start_date, end_date: p.end_date }]);
+
+  /**
+   * Team API: matching reads languages and mobility from the tourist profile, so that is saved first;
+   * then the trip is created with one segment per city, and its page shows the guides for each.
+   */
   const submit = async () => {
-    if (!multi) {
-      setProfile({ ...p, region: legs[0].region, plan_id: null });
-      return nav("/results");
-    }
-    // Several cities: save the outline, then each city gets its own guide and itinerary from the trip page.
+    const tok = teamToken()!;
     setBusy(true);
     setErr("");
     try {
       const { languages, mobility, interests, dietary, budget_per_day, party_size } = p;
-      const plan = await createPlan(legs, { languages, mobility, interests, dietary, budget_per_day, party_size });
-      nav(`/plans/${plan.id}`);
-    } catch {
-      setErr(t("multi.saveFailed"));
+      await team.saveTouristPrefs(tok, { languages, mobility, interests, dietary, budget_per_day, party_size });
+      const trip = await team.createTrip(tok, stays().map((leg) => ({
+        region: leg.region.toUpperCase(), service_type: "FULL_DAY", start_date: leg.start_date, end_date: leg.end_date,
+        group_size: party_size, attributes: interests.filter((i) => GUIDE_INTERESTS.includes(i)).map((i) => i.toUpperCase()),
+        budget: budget_per_day * stayDays(leg), // the team API takes the guide's whole fee for the stay
+      })));
+      nav(`/t/${trip.id}`);
+    } catch (e) {
+      setErr(e instanceof ApiError && e.detail ? e.detail : t("multi.saveFailed"));
       setBusy(false);
     }
   };
@@ -141,9 +152,9 @@ export default function ProfilePage() {
                   <div className="leghead">
                     {multi && <span className="legno" aria-hidden="true">{i + 1}</span>}
                     <select value={leg.region} aria-label={multi ? t("multi.cityN", { n: i + 1 }) : t("trip.region")} onChange={(e) => setLeg(i, { region: e.target.value })}>
-                      {PROVINCES.map((prov) => (
+                      {PROVINCES.filter((prov) => prov.cities.some((c) => cities.includes(c))).map((prov) => (
                         <optgroup key={prov.en} label={i18n.language === "ko" ? prov.ko : prov.en}>
-                          {prov.cities.filter((c) => c.id === leg.region || !legs.some((x) => x.region === c.id))
+                          {prov.cities.filter((c) => cities.includes(c) && (c.id === leg.region || !legs.some((x) => x.region === c.id)))
                             .map((c) => <option key={c.id} value={c.id}>{t(`region.${c.id}`)}</option>)}
                         </optgroup>
                       ))}
@@ -186,7 +197,7 @@ export default function ProfilePage() {
                   />
                 </label>
                 <datalist id="city-names">
-                  {CITIES.filter((c) => !legs.some((leg) => leg.region === c.id)).map((c) => <option key={c.id} value={t(`region.${c.id}`)} />)}
+                  {cities.filter((c) => !legs.some((leg) => leg.region === c.id)).map((c) => <option key={c.id} value={t(`region.${c.id}`)} />)}
                 </datalist>
                 <button type="button" className="primary" onClick={addCity} disabled={!cityText.trim()}>{t("multi.add")}</button>
                 <button type="button" className="ghost" onClick={() => { setAdding(false); setCityText(""); setErr(""); }}>{t("collab.cancel")}</button>
@@ -227,7 +238,7 @@ export default function ProfilePage() {
             </div>
           </fieldset>
           <MultiSelect
-            label={t("needs.interests")} options={INTERESTS} value={p.interests}
+            label={t("needs.interests")} options={GUIDE_INTERESTS} value={p.interests}
             onChange={(v) => set("interests", v)} optionLabel={(i) => t(`interest.${i}`)}
           />
           <MultiSelect
@@ -264,7 +275,7 @@ export default function ProfilePage() {
         {step < 2 ? (
           <button type="button" className="primary" onClick={next}>{t("next")}</button>
         ) : (
-          <button type="button" className="primary" onClick={submit} disabled={busy}>{t(multi ? "multi.create" : "find")}</button>
+          <button type="button" className="primary" onClick={submit} disabled={busy}>{t(busy ? "auth.waking" : "find")}</button>
         )}
       </div>
     </div>

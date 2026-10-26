@@ -27,7 +27,7 @@ export default function MealPicker({ itinerary: it, day, meal, busy, onAdd, onCa
   const find = async () => {
     setState("loading");
     try {
-      setOptions(await getMealOptions(it.id, day, meal, cuisines, diets, cityById(it.trip.region)));
+      setOptions(await getMealOptions(it, day, meal, cuisines, diets, cityById(it.trip.region)));
       setState("idle");
     } catch {
       setState("error");
