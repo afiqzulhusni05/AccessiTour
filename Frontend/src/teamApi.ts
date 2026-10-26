@@ -225,6 +225,9 @@ export const toTeamMobility = (m: Mobility) => MOBILITY_OUT[m];
 // ---------- guide availability: the times a guide can be booked. Matching only offers guides who are free.
 
 export interface TeamSlot { date: string; start_time: string; end_time: string } // times as HH:MM[:SS]
+/** Another guide's free times between two dates (any signed-in user may look). */
+export const guideAvailability = (token: string, guideId: number, from: string, to: string) =>
+  call<TeamSlot[]>("GET", `/guides/${guideId}/availability?from=${from}&to=${to}`, token);
 export const getAvailability = (token: string) => call<TeamSlot[]>("GET", "/guides/me/availability", token);
 /** Replaces every upcoming slot with `slots` (the team API keeps past ones). */
 export const saveAvailability = (token: string, slots: TeamSlot[]) =>

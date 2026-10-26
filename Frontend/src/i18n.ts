@@ -73,6 +73,8 @@ const en = {
   teamtrip: {
     budget: "budget ₩{{amount}}", guidesFor: "Guides for {{city}}", none: "No guide is free and suitable for these dates yet. Try other dates.",
     verified: "Verified", forStay: "for the whole stay", partly: "Not free on every day of this stay, so this guide can't be booked for it.",
+    whichDays: "Which days?", notFreeOn: "Not marked as free (6+ hours) on: {{days}}",
+    bookedElsewhere: "Marked as free on every day, but already booked by another traveller on some of them.",
     request: "Request booking", requesting: "Sending…", again: "Your earlier request for this city was declined or cancelled. Choose a guide again.",
     excluded_one: "{{count}} guide was left out", excluded_other: "{{count}} guides were left out",
     scoreNote: "Scores and reasons come from the team's matching service. The score is a weighted comparison out of 100, not a prediction of how the tour will go.",
@@ -379,6 +381,8 @@ const ko: typeof en = {
   teamtrip: {
     budget: "예산 ₩{{amount}}", guidesFor: "{{city}} 가이드", none: "이 날짜에 가능한 가이드가 아직 없어요. 다른 날짜를 선택해 보세요.",
     verified: "인증됨", forStay: "체류 기간 전체", partly: "이 기간 중 일부 날짜만 가능해서 예약할 수 없어요.",
+    whichDays: "어느 날짜인가요?", notFreeOn: "6시간 이상 가능하다고 표시하지 않은 날: {{days}}",
+    bookedElsewhere: "모든 날짜를 가능으로 표시했지만, 일부 날짜는 이미 다른 여행자가 예약했어요.",
     request: "예약 요청", requesting: "보내는 중…", again: "이 도시의 이전 요청이 거절되거나 취소됐어요. 가이드를 다시 선택하세요.",
     excluded_one: "제외된 가이드 {{count}}명", excluded_other: "제외된 가이드 {{count}}명",
     scoreNote: "점수와 이유는 팀의 매칭 서비스에서 계산해요. 100점 만점의 가중 비교이며, 여행이 얼마나 잘 될지를 예측하는 수치는 아니에요.",

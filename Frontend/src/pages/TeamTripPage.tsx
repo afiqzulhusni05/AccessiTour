@@ -27,6 +27,7 @@ export default function TeamTripPage() {
   const [tab, setTab] = useState(0);
   const [busy, setBusy] = useState<number | null>(null); // guide being requested
   const [msg, setMsg] = useState("");
+  const [missing, setMissing] = useState<Record<string, string[]>>({}); // "segment:guide" -> days the guide isn't free
 
   const load = useCallback(async () => {
     const tok = teamToken()!;
@@ -78,6 +79,19 @@ export default function TeamTripPage() {
     const to = (tab + step + trip.segments.length) % trip.segments.length;
     setTab(to);
     document.getElementById(`segtab-${to}`)?.focus();
+  };
+
+  /** Which days of the stay a guide hasn't marked as free for a full day (6+ hours), looked up when asked. */
+  const showMissing = async (s: team.TeamSegment, m: team.TeamMatch) => {
+    const slots = await team.guideAvailability(teamToken()!, m.guide.id, s.start_date, s.end_date).catch(() => null);
+    if (!slots) return;
+    const hours = (x: team.TeamSlot) => (Date.parse(`2000-01-01T${x.end_time.slice(0, 5)}`) - Date.parse(`2000-01-01T${x.start_time.slice(0, 5)}`)) / 36e5;
+    const days: string[] = [];
+    for (let d = new Date(`${s.start_date}T00:00`); d <= new Date(`${s.end_date}T00:00`); d.setDate(d.getDate() + 1)) {
+      const day = d.toLocaleDateString("sv");
+      if (!slots.some((x) => x.date === day && hours(x) >= 6)) days.push(day);
+    }
+    setMissing((prev) => ({ ...prev, [`${s.id}:${m.guide.id}`]: days }));
   };
 
   const seg = trip.segments[tab];
@@ -149,6 +163,11 @@ export default function TeamTripPage() {
                           ))}
                         </ul>
                         {partly && <p className="warn">{t("teamtrip.partly")}</p>}
+                        {partly && (() => {
+                          const days = missing[`${seg.id}:${m.guide.id}`];
+                          if (!days) return <button type="button" className="textlink" onClick={() => showMissing(seg, m)}>{t("teamtrip.whichDays")}</button>;
+                          return <p className="muted">{days.length ? t("teamtrip.notFreeOn", { days: days.join(", ") }) : t("teamtrip.bookedElsewhere")}</p>;
+                        })()}
                       </div>
                       <div className="score">
                         <div className="strip" role="img" aria-label={`${t("results.match")} ${Math.round(m.total_score)}%`}>
