@@ -10,6 +10,7 @@ class Settings(BaseSettings):
     access_token_expire_minutes: int = 1440
     
     gemini_api_key: str
+    kakao_rest_api_key: str
 
 
 settings = Settings()

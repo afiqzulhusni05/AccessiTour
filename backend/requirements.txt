@@ -6,3 +6,4 @@ alembic
 pwdlib[argon2]
 pyjwt
 google-genai
+requests
