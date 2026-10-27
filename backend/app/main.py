@@ -1,11 +1,22 @@
-from fastapi.responses import RedirectResponse
-from fastapi.middleware.cors import CORSMiddleware
-from app.routers import auth, users, itinerary
 from fastapi import Depends, FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import RedirectResponse
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.database import get_db
+from app.routers import (
+    auth,
+    bookings,
+    guides,
+    itineraries,
+    itinerary,
+    matching,
+    tourists,
+    trips,
+    users,
+)
+
 
 app = FastAPI(title="AccessiTour API")
 
@@ -17,10 +28,17 @@ app.add_middleware(
 )
 
 app.include_router(auth.router)
-
 app.include_router(users.router)
+app.include_router(tourists.router)
+app.include_router(guides.router)
+app.include_router(matching.router)
+app.include_router(trips.router)
+app.include_router(bookings.router)
+app.include_router(itineraries.router)
 
+# AI itinerary generation endpoint
 app.include_router(itinerary.router)
+
 
 @app.get("/", include_in_schema=False)
 def root():
