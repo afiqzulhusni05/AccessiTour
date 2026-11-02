@@ -115,9 +115,17 @@ PLACE_NAME_RULES = """
 """
 
 
-client = genai.Client(
-    api_key=settings.gemini_api_key
-)
+_client: genai.Client | None = None
+
+
+def get_client() -> genai.Client:
+    """Created on first use, so a missing key only affects AI generation."""
+    global _client
+    if not settings.gemini_api_key:
+        raise RuntimeError("AI itinerary generation is not set up (GEMINI_API_KEY is missing).")
+    if _client is None:
+        _client = genai.Client(api_key=settings.gemini_api_key)
+    return _client
 
 
 # --------------------------------------------------
@@ -439,7 +447,7 @@ The backend will separately handle:
     # --------------------------------------------------
 
     try:
-        interaction = client.interactions.create(
+        interaction = get_client().interactions.create(
             model="gemini-3.8-flash",
             input=prompt,
             response_format={

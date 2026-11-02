@@ -1,6 +1,6 @@
-from app.services.kakao_place import search_place
+from app.services.kakao_place import find_verified_place
 
 
-place = search_place("부산박물관")
+place = find_verified_place(["부산박물관", "Busan Museum"], region="BUSAN", place_category="ATTRACTION")
 
 print(place)

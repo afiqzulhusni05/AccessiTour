@@ -374,6 +374,10 @@ def find_verified_place(
 
     region = region.upper()
 
+    # Without a Kakao key, skip verification: the stop is kept, just without a map position.
+    if not settings.kakao_rest_api_key:
+        return None
+
     # Remove empty names and duplicates
     # while keeping the original order.
     queries = []

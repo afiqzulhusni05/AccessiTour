@@ -8,9 +8,11 @@ class Settings(BaseSettings):
     jwt_secret_key: str
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
-    
-    gemini_api_key: str
-    kakao_rest_api_key: str
+
+    # Optional, so the app (and alembic on Render) still starts without them.
+    # Without a key, AI itinerary generation answers 503 instead of crashing everything.
+    gemini_api_key: str | None = None
+    kakao_rest_api_key: str | None = None
 
 
 settings = Settings()
