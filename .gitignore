@@ -1,4 +1,14 @@
 .DS_Store
-.venv/
+
+# Python
 __pycache__/
+*.pyc
+venv/
+.venv/
+
+# Secrets
 .env
+
+# React Native / Expo
+node_modules/
+.expo/
