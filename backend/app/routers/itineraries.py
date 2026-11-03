@@ -161,6 +161,22 @@ def open_itinerary(
     return read(db, itinerary, booking, user)
 
 
+@router.post("/{itinerary_id}/ai-draft", response_model=ItineraryRead, status_code=202)
+def request_ai_draft(
+    itinerary_id: int, background: BackgroundTasks,
+    user: User = Depends(get_current_user), db: Session = Depends(get_db),
+):
+    """Ask the AI for a first draft again, for example after it was too busy the first time.
+    Only for an itinerary that still has no stops; the stops appear a little later."""
+    itinerary, booking = get_my_itinerary(db, user, itinerary_id)
+    check_editable(booking)
+    has_stops = db.scalar(select(ItineraryItem.id).where(ItineraryItem.itinerary_id == itinerary.id))
+    if has_stops is not None:
+        raise HTTPException(status_code=409, detail="This itinerary already has stops")
+    background.add_task(fill_with_ai_draft, itinerary.id)
+    return read(db, itinerary, booking, user)
+
+
 @router.get("/{itinerary_id}", response_model=ItineraryRead)
 def read_itinerary(itinerary_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     itinerary, booking = get_my_itinerary(db, user, itinerary_id)

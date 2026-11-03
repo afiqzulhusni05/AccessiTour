@@ -11,8 +11,31 @@ both sides add stops themselves, as before.
 
 import datetime as dt
 import logging
+import time
 
 logger = logging.getLogger(__name__)
+
+# Gemini sometimes answers "high demand, try again later". Wait and try again
+# this many seconds apart before giving up (4 tries, about 1.5 minutes in all).
+RETRY_WAITS = (10, 30, 60)
+
+
+def call_with_retries(fn, waits=RETRY_WAITS, sleep=time.sleep):
+    """Call fn(); if it fails, wait and try again, once per entry in waits.
+
+    A ValueError means the request itself is wrong, so it isn't retried.
+    The last error is raised if every try fails.
+    """
+    for attempt, wait in enumerate((*waits, None), start=1):
+        try:
+            return fn()
+        except ValueError:
+            raise
+        except Exception as error:
+            if wait is None:
+                raise
+            logger.warning("AI try %s failed (%s); trying again in %ss", attempt, error, wait)
+            sleep(wait)
 
 
 def parse_stops(stops, start: dt.date, end: dt.date) -> list[dict]:
@@ -79,7 +102,7 @@ def fill_with_ai_draft(itinerary_id: int) -> None:
         guide = db.get(Guide, booking.guide_id)
 
         try:
-            stops = generate_itinerary(
+            stops = call_with_retries(lambda: generate_itinerary(
                 region=segment.region.value,
                 start_date=booking.start_date.isoformat(),
                 end_date=booking.end_date.isoformat(),
@@ -96,7 +119,7 @@ def fill_with_ai_draft(itinerary_id: int) -> None:
                 dietary_notes=tourist.dietary_notes,
                 special_requests=extra_requests(tourist),
                 guide_languages=list(guide.languages),
-            )
+            ))
         except Exception:  # whatever goes wrong, the itinerary just stays empty
             logger.exception("AI draft failed for itinerary %s", itinerary_id)
             return
