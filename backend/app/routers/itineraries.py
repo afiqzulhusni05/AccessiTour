@@ -18,6 +18,7 @@ from app.enums import BookingStatus, EditedBy, MobilityLevel
 from app.itinerary_rules import HAS_ITINERARY, PLANNING, date_problem, status_for_approvals, time_problem
 from app.models import Booking, Guide, Itinerary, ItineraryComment, ItineraryItem, Tourist, Trip, TripSegment, User, UserRole
 from app.routers.bookings import get_my_booking, to_read
+from app.services.ai_itinerary import generate_itinerary
 from app.schemas.itineraries import (
     CommentCreate,
     CommentRead,
@@ -133,15 +134,69 @@ def open_itinerary(data: ItineraryCreate, user: User = Depends(get_current_user)
     if itinerary is None:
         if booking.status not in HAS_ITINERARY:
             raise HTTPException(status_code=409, detail="The guide hasn't accepted this booking yet")
-        tourist = db.get(Tourist, db.get(Trip, db.get(TripSegment, booking.segment_id).trip_id).tourist_id)
+        segment = db.get(TripSegment, booking.segment_id)
+        trip = db.get(Trip, segment.trip_id)
+        tourist = db.get(Tourist, trip.tourist_id)
+        guide = db.get(Guide, booking.guide_id)
+        
+        #give the real website data to the AI
+        ai_stops = generate_itinerary(
+            region=segment.region.value,
+            start_date=booking.start_date.isoformat(),
+            end_date=booking.end_date.isoformat(),
+            service_type=booking.service_type.value,
+            start_time=(
+                booking.start_time.strftime("%H:%M")
+                if booking.start_time
+                else None
+            ),
+            end_time=(
+                booking.end_time.strftime("%H:%M")
+                if booking.end_time
+                else None
+            ),
+            group_size=segment.group_size,
+            transport_preference=segment.transport_preference.value,
+            attributes=segment.attributes,
+            budget=segment.budget,
+            preferred_language=tourist.preferred_language.value,
+            mobility_level=tourist.mobility_level.value,
+            dietary=tourist.dietary,
+            dietary_notes=tourist.dietary_notes,
+            special_requests=tourist.special_requests,
+            guide_languages=guide.languages,
+        )
+        
         itinerary = Itinerary(
             booking_id=booking.id,
             needs_accessibility_check=tourist.mobility_level != MobilityLevel.NORMAL,
             approved_by_tourist=False, approved_by_guide=False,
         )
         db.add(itinerary)
+
         if booking.status == BookingStatus.ACCEPTED:
             booking.status = BookingStatus.ITINERARY_DRAFT
+
+        # Get the itinerary ID before saving its stops
+        db.flush()
+
+        # Save the AI-generated first draft into the database
+        for stop in ai_stops:
+            db.add(
+                ItineraryItem(
+                    itinerary_id=itinerary.id,
+                    date=dt.date.fromisoformat(stop.date),
+                    start_time=dt.time.fromisoformat(stop.start_time),
+                    end_time=dt.time.fromisoformat(stop.end_time),
+                    place_name=stop.place_name,
+                    activity=stop.activity,
+                    latitude=stop.latitude,
+                    longitude=stop.longitude,
+                    edited_by=EditedBy.AI,
+                    needs_accessibility_check=itinerary.needs_accessibility_check,
+                )
+            )
+
         db.commit()
         db.refresh(itinerary)
     return read(db, itinerary, booking, user)

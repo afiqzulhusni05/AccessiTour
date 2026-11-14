@@ -75,8 +75,10 @@ PLACE_NAME_RULES = """
   represented by preferred_language.
 
 - place_name_ko:
-  When reasonably confident, provide the official Korean place
-  name exactly as it would normally appear on a Korean map service.
+  When reasonably confident, provide the official or commonly used Korean
+  place name exactly as it would normally appear on a Korean map service.
+  Prefer the real Korean map-search name over a literal translation or
+  simple transliteration of the English name.
 
   For restaurants or cafes, include the branch name when known.
 
@@ -142,6 +144,11 @@ def attach_verified_coordinates(
         latitude = None
         longitude = None
 
+        print("\n=== PLACE DEBUG ===")
+        print("English name:", stop.place_name)
+        print("Korean name:", stop.place_name_ko)
+        print("Category:", stop.place_category)
+
         place = find_verified_place(
             names=[
                 stop.place_name_ko,
@@ -150,6 +157,14 @@ def attach_verified_coordinates(
             region=region,
             place_category=stop.place_category,
         )
+
+        if place:
+            print("Matched Kakao place:", place["kakao_place_name"])
+            print("Match score:", place["match_score"])
+            print("Coordinates:", place["latitude"], place["longitude"])
+        else:
+            print("Matched Kakao place: NONE")
+            print("Coordinates: NONE")
 
         if place:
             latitude = place["latitude"]
@@ -386,11 +401,23 @@ ITINERARY RULES
 - Also consider these dietary notes:
   {dietary_notes_text}.
 
+- Treat dietary requirements such as HALAL as traveler
+  preferences or requirements, not as verified facts
+  about a restaurant.
+
 - Seafood, vegetarian, pork-free or alcohol-free food
   must not automatically be considered HALAL.
 
-- Do not confidently claim that a restaurant is
-  Halal-certified unless you are reasonably confident.
+- Do not describe a restaurant, cafe, dish, or meal as
+  "Halal", "Halal-certified", or guaranteed to satisfy
+  the traveler's dietary requirement unless that status
+  has been explicitly verified by reliable external data.
+
+- If dietary compliance has not been verified, use neutral
+  wording and recommend confirming the requirement with
+  the restaurant.
+
+- Never invent Halal certification or dietary compliance.
 
 - Consider these special requests:
   {special_requests_text}.

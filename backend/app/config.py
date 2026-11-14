@@ -11,6 +11,7 @@ class Settings(BaseSettings):
     
     gemini_api_key: str
     kakao_rest_api_key: str
+    baze_api_key: str
 
 
 settings = Settings()
