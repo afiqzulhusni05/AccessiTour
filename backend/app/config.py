@@ -9,9 +9,10 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     access_token_expire_minutes: int = 1440
     
-    gemini_api_key: str
-    kakao_rest_api_key: str
-    baze_api_key: str
+    # Optional, so the app can still start without AI/map API keys.
+    gemini_api_key: str | None = None
+    kakao_rest_api_key: str | None = None
+    baze_api_key: str | None = None
 
 
 settings = Settings()

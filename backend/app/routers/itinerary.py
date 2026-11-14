@@ -1,4 +1,7 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
+
+from app.deps import get_current_user
+from app.models import User
 
 from app.schemas.itinerary import ItineraryGenerateRequest
 from app.services.ai_itinerary import ItineraryStop, generate_itinerary
@@ -11,7 +14,10 @@ router = APIRouter(
 
 
 @router.post("/generate", response_model=list[ItineraryStop])
-def generate_itinerary_endpoint(data: ItineraryGenerateRequest):
+def generate_itinerary_endpoint(
+    data: ItineraryGenerateRequest,
+    _: User = Depends(get_current_user),  # logged-in users only, so strangers can't use up the Gemini quota
+):
     try:
         return generate_itinerary(
             region=data.region,
