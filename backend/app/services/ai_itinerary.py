@@ -1,5 +1,7 @@
+import json
 from typing import Literal, Optional
 
+import requests
 from google import genai
 from google.genai import errors
 from pydantic import (
@@ -13,6 +15,8 @@ from app.services.kakao_place import (
     find_verified_place,
 )
 
+BAZE_BASE_URL = "https://api.baze.co/v1/gateway"
+BAZE_MODEL = "gpt-6-luna"
 
 # --------------------------------------------------
 # Public API response model
@@ -35,7 +39,7 @@ class ItineraryStops(
 
 
 # --------------------------------------------------
-# Internal Gemini output model
+# Internal AI output model
 # --------------------------------------------------
 
 class GeneratedStop(BaseModel):
@@ -66,7 +70,7 @@ class GeneratedStops(
 
 
 # --------------------------------------------------
-# Gemini place-name rules
+# AI place-name rules
 # --------------------------------------------------
 
 PLACE_NAME_RULES = """
@@ -111,7 +115,7 @@ PLACE_NAME_RULES = """
   activity
 
 - Do not return latitude or longitude.
-  Gemini must never guess coordinates.
+  The AI model must never guess coordinates.
   The backend will verify the place through Kakao
   and add coordinates separately.
 """
@@ -130,6 +134,146 @@ def get_client() -> genai.Client:
     return _client
 
 
+def generate_with_baze(prompt: str) -> GeneratedStops:
+    """
+    Generate itinerary stops using GPT-6 Luna
+    through the KU/BAZE Gateway.
+    """
+
+    if not settings.baze_api_key:
+        raise RuntimeError(
+            "BAZE_API_KEY is missing."
+        )
+
+    try:
+        response = requests.post(
+            f"{BAZE_BASE_URL}/chat/completions",
+            headers={
+                "Authorization": (
+                    f"Bearer {settings.baze_api_key}"
+                ),
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": BAZE_MODEL,
+                "messages": [
+                {
+                    "role": "user",
+                    "content": (
+                        prompt
+                        + """
+
+            Return the final response as valid JSON only.
+
+            Use exactly this top-level structure:
+
+            {
+            "root": [
+                {
+                "date": "YYYY-MM-DD",
+                "start_time": "HH:MM",
+                "end_time": "HH:MM",
+                "place_name": "string",
+                "place_name_ko": "string or null",
+                "place_category": "FOOD, ATTRACTION, or OTHER",
+                "activity": "string"
+                }
+            ]
+            }
+
+            Do not include markdown, explanations, or text outside the JSON.
+            """
+                    ),
+                }
+            ],
+                "response_format": {
+                    "type": "json_object",
+                },
+            },
+            timeout=120,
+        )
+
+        if not response.ok:
+            print("BAZE status:", response.status_code)
+            print("BAZE response:", response.text)
+
+        response.raise_for_status()
+
+    except requests.RequestException as error:
+        raise RuntimeError(
+            "GPT-6 Luna is temporarily unavailable."
+        ) from error
+
+    try:
+        data = response.json()
+
+        content = (
+            data["choices"][0]["message"]["content"]
+        )
+
+        parsed = json.loads(content)
+
+        # GPT currently returns:
+        # {"root": [...]}
+        if (
+            isinstance(parsed, dict)
+            and "root" in parsed
+        ):
+            parsed = parsed["root"]
+
+        return GeneratedStops.model_validate(parsed)
+
+    except (
+        KeyError,
+        IndexError,
+        TypeError,
+        json.JSONDecodeError,
+        ValidationError,
+    ) as error:
+        raise RuntimeError(
+            "GPT-6 Luna returned an invalid itinerary structure."
+        ) from error
+def generate_with_gemini(prompt: str) -> GeneratedStops:
+    """
+    Generate itinerary stops using Gemini.
+    """
+
+    try:
+        interaction = get_client().interactions.create(
+            model="gemini-3.8-flash",
+            input=prompt,
+            response_format={
+                "type": "text",
+                "mime_type": "application/json",
+                "schema": GeneratedStops.model_json_schema(),
+            },
+        )
+
+        if not interaction.output_text:
+            raise RuntimeError(
+                "Gemini returned no itinerary."
+            )
+
+        return GeneratedStops.model_validate_json(
+            interaction.output_text
+        )
+
+    except errors.ServerError as error:
+        raise RuntimeError(
+            "Gemini is temporarily unavailable."
+        ) from error
+
+    except errors.ClientError as error:
+        raise RuntimeError(
+            "Gemini rejected the request."
+        ) from error
+
+    except ValidationError as error:
+        raise RuntimeError(
+            "Gemini returned an invalid itinerary structure."
+        ) from error
+        
+        
 # --------------------------------------------------
 # Attach verified Kakao coordinates
 # --------------------------------------------------
@@ -216,7 +360,7 @@ def generate_itinerary(
     guide_languages: list[str],
 ) -> list[ItineraryStop]:
 
-    # Prepare list values for Gemini.
+    # Prepare list values for AI prompt.
     attributes_text = (
         ", ".join(attributes)
         if attributes
@@ -313,7 +457,7 @@ This is a FULL_DAY trip segment.
 """
 
     # --------------------------------------------------
-    # Gemini prompt
+    # Shared AI prompt
     # --------------------------------------------------
 
     prompt = f"""
@@ -470,54 +614,26 @@ The backend will separately handle:
 """
 
     # --------------------------------------------------
-    # Gemini request
+    # Generate with primary AI provider
     # --------------------------------------------------
 
+    print("Trying GPT-6 Luna...")
+
     try:
-        interaction = get_client().interactions.create(
-            model="gemini-3.8-flash",
-            input=prompt,
-            response_format={
-                "type": "text",
-                "mime_type": "application/json",
-                "schema": (
-                    GeneratedStops.model_json_schema()
-                ),
-            },
-        )
+        generated_stops = generate_with_baze(prompt)
+        print("GPT-6 Luna succeeded.")
 
-        if not interaction.output_text:
-            raise RuntimeError(
-                "Gemini returned no itinerary."
-            )
+    except RuntimeError as error:
+        print("GPT-6 Luna failed:")
+        print(error)
+        print("Falling back to Gemini...")
 
-        # Validate Gemini's internal JSON structure.
-        generated_stops = (
-            GeneratedStops.model_validate_json(
-                interaction.output_text
-            )
-        )
+        generated_stops = generate_with_gemini(prompt)
+        print("Gemini succeeded.")
 
-        # Kakao verifies each place and fills coordinates.
-        return attach_verified_coordinates(
-            generated_stops,
-            region,
-        )
-
-    except errors.ServerError as error:
-        raise RuntimeError(
-            "Gemini is temporarily unavailable."
-        ) from error
-
-    except errors.ClientError as error:
-        raise RuntimeError(
-            "Gemini rejected the request."
-        ) from error
-
-    except ValidationError as error:
-        raise RuntimeError(
-            (
-                "Gemini returned an invalid "
-                "itinerary structure."
-            )
-        ) from error
+    # Kakao verifies every generated place
+    # and fills coordinates only when confident.
+    return attach_verified_coordinates(
+        generated_stops,
+        region,
+    )

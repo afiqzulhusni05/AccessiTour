@@ -3,7 +3,7 @@ from app.services.ai_itinerary import generate_itinerary
 stops = generate_itinerary(
     region="BUSAN",
     start_date="2026-10-20",
-    end_date="2026-10-20",
+    end_date="2026-10-22",
     service_type="FULL_DAY",
     start_time=None,
     end_time=None,
