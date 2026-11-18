@@ -94,6 +94,17 @@ def read(db: Session, itinerary: Itinerary, booking: Booking, user: User) -> Iti
     )
 
 
+def read_and_release(db: Session, itinerary: Itinerary, booking: Booking, user: User) -> ItineraryRead:
+    """Like read(), then gives the database connection back straight away.
+
+    The AI draft runs in the background after this response, and this request's
+    session would otherwise stay open (idle in a transaction) until it finishes,
+    which can be minutes. Neon closes such connections, so release it now."""
+    result = read(db, itinerary, booking, user)
+    db.close()
+    return result
+
+
 # ---------- Endpoints ----------
 
 
@@ -158,7 +169,7 @@ def open_itinerary(
         else:
             db.refresh(itinerary)
             background.add_task(fill_with_ai_draft, itinerary.id)
-    return read(db, itinerary, booking, user)
+    return read_and_release(db, itinerary, booking, user)
 
 
 @router.post("/{itinerary_id}/ai-draft", response_model=ItineraryRead, status_code=202)
@@ -174,7 +185,7 @@ def request_ai_draft(
     if has_stops is not None:
         raise HTTPException(status_code=409, detail="This itinerary already has stops")
     background.add_task(fill_with_ai_draft, itinerary.id)
-    return read(db, itinerary, booking, user)
+    return read_and_release(db, itinerary, booking, user)
 
 
 @router.get("/{itinerary_id}", response_model=ItineraryRead)
