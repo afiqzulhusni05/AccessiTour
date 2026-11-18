@@ -1,3 +1,4 @@
+import json
 from typing import Literal, Optional
 
 from google import genai
@@ -199,6 +200,8 @@ def generate_itinerary(
     dietary_notes: Optional[str],
     special_requests: Optional[str],
     guide_languages: list[str],
+    model: Optional[str] = None,
+    provider: Literal["gemini", "openai"] = "gemini",
 ) -> list[ItineraryStop]:
 
     # Prepare list values for Gemini.
@@ -443,54 +446,96 @@ The backend will separately handle:
 """
 
     # --------------------------------------------------
-    # Gemini request
+    # Ask the AI (Gemini, or OpenAI as a backup), then let Kakao check the places
     # --------------------------------------------------
 
+    if provider == "openai":
+        output_text = ask_openai(prompt, model)
+    else:
+        output_text = ask_gemini(prompt, model)
+
+    try:
+        generated_stops = GeneratedStops.model_validate_json(output_text)
+    except ValidationError as error:
+        raise RuntimeError("The AI returned an invalid itinerary structure.") from error
+
+    # Kakao verifies each place and fills coordinates.
+    return attach_verified_coordinates(generated_stops, region)
+
+
+# --------------------------------------------------
+# AI providers. Each returns the stops as JSON text (a list),
+# or raises RuntimeError when it can't.
+# --------------------------------------------------
+
+
+def ask_gemini(prompt: str, model: Optional[str]) -> str:
     try:
         interaction = get_client().interactions.create(
-            model="gemini-3.8-flash",
+            model=model or settings.gemini_model,
             input=prompt,
             response_format={
                 "type": "text",
                 "mime_type": "application/json",
-                "schema": (
-                    GeneratedStops.model_json_schema()
-                ),
+                "schema": GeneratedStops.model_json_schema(),
             },
         )
-
-        if not interaction.output_text:
-            raise RuntimeError(
-                "Gemini returned no itinerary."
-            )
-
-        # Validate Gemini's internal JSON structure.
-        generated_stops = (
-            GeneratedStops.model_validate_json(
-                interaction.output_text
-            )
-        )
-
-        # Kakao verifies each place and fills coordinates.
-        return attach_verified_coordinates(
-            generated_stops,
-            region,
-        )
-
+    except RuntimeError:
+        raise
     except errors.ServerError as error:
-        raise RuntimeError(
-            "Gemini is temporarily unavailable."
-        ) from error
-
+        raise RuntimeError("Gemini is temporarily unavailable.") from error
     except errors.ClientError as error:
-        raise RuntimeError(
-            "Gemini rejected the request."
-        ) from error
+        raise RuntimeError("Gemini rejected the request.") from error
+    except Exception as error:  # e.g. "high demand" errors from the newer SDK paths
+        raise RuntimeError(f"Gemini failed: {error}") from error
 
-    except ValidationError as error:
-        raise RuntimeError(
-            (
-                "Gemini returned an invalid "
-                "itinerary structure."
-            )
-        ) from error
+    if not interaction.output_text:
+        raise RuntimeError("Gemini returned no itinerary.")
+    return interaction.output_text
+
+
+_openai_client = None
+
+
+OPENAI_FORMAT_NOTE = """
+Return ONLY a JSON object of this form, with no text before or after it:
+{"stops": [{"date": "YYYY-MM-DD", "start_time": "HH:MM", "end_time": "HH:MM",
+"place_name": "...", "place_name_ko": "... or null", "place_category": "FOOD | ATTRACTION | OTHER",
+"activity": "..."}]}
+"""
+
+
+def ask_openai(prompt: str, model: Optional[str]) -> str:
+    """Any OpenAI-compatible API: OpenAI itself, or the Korea University API Gateway
+    (which can also serve other providers' models) when OPENAI_BASE_URL is set."""
+    global _openai_client
+    model = model or settings.openai_model
+    if not settings.openai_api_key or not model:
+        raise RuntimeError("Backup AI is not set up (OPENAI_API_KEY or OPENAI_MODEL is missing).")
+
+    from openai import OpenAI, OpenAIError  # only needed when the backup is used
+
+    if _openai_client is None:
+        _openai_client = OpenAI(
+            api_key=settings.openai_api_key,
+            base_url=settings.openai_base_url or None,
+        )
+    try:
+        # Chat Completions with JSON mode works across most OpenAI-compatible gateways.
+        # The answer is still checked against the expected structure below.
+        response = _openai_client.chat.completions.create(
+            model=model,
+            messages=[{"role": "user", "content": prompt + OPENAI_FORMAT_NOTE}],
+            response_format={"type": "json_object"},
+        )
+    except OpenAIError as error:
+        raise RuntimeError(f"Backup AI request failed: {type(error).__name__}: {error}") from error
+
+    text = response.choices[0].message.content if response.choices else None
+    if not text:
+        raise RuntimeError("Backup AI returned no itinerary.")
+    try:
+        data = json.loads(text)
+    except json.JSONDecodeError as error:
+        raise RuntimeError("Backup AI returned text that isn't JSON.") from error
+    return json.dumps(data.get("stops", data) if isinstance(data, dict) else data)
