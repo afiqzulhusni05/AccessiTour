@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.itinerary_ai import call_with_retries, extra_requests, parse_stops
+from app.itinerary_ai import ai_request, call_with_retries, extra_requests, parse_stops
 
 NOV_10 = dt.date(2026, 11, 10)
 NOV_11 = dt.date(2026, 11, 11)
@@ -88,3 +88,19 @@ def test_a_wrong_request_is_not_retried():
     with pytest.raises(ValueError):
         call_with_retries(fn, waits=(10,), sleep=lambda s: None)
     assert len(calls) == 1
+
+
+def test_the_ai_request_is_plain_values():
+    """Plain values, so nothing has to be read from the database during the AI call."""
+    enum = lambda v: SimpleNamespace(value=v)
+    segment = SimpleNamespace(region=enum("BUSAN"), group_size=2, transport_preference=enum("PUBLIC"),
+                              attributes=["FOOD"], budget=150000)
+    booking = SimpleNamespace(start_date=NOV_10, end_date=NOV_10, service_type=enum("FULL_DAY"),
+                              start_time=None, end_time=None)
+    tourist = SimpleNamespace(preferred_language=enum("en"), mobility_level=enum("SLOW_WALK"), dietary=["HALAL"],
+                              dietary_notes=None, special_requests=None, religious_needs=None)
+    guide = SimpleNamespace(languages=["en", "ko"])
+    request = ai_request(segment, booking, tourist, guide)
+    assert request["region"] == "BUSAN" and request["start_date"] == "2026-11-10"
+    assert request["start_time"] is None and request["mobility_level"] == "SLOW_WALK"
+    assert request["guide_languages"] == ["en", "ko"]
