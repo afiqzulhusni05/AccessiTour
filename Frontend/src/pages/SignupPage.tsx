@@ -14,8 +14,10 @@ const emptyGuide: GuideProfileIn = {
 export default function SignupPage() {
   const { t } = useTranslation();
   const { user, signup } = useAuth();
-  const from = (useLocation().state as { from?: string } | null)?.from ?? "/";
-  const [role, setRole] = useState<(typeof ROLES)[number]>("tourist");
+  const state = useLocation().state as { from?: string; role?: string } | null;
+  const from = state?.from ?? "/";
+  // The landing page's "Become a guide" button opens this page with the guide option picked.
+  const [role, setRole] = useState<(typeof ROLES)[number]>(state?.role === "guide" ? "guide" : "tourist");
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");

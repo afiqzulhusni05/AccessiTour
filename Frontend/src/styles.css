@@ -434,3 +434,64 @@ ol.plain { margin: 0; padding-left: 1.2rem; font-weight: 600; }
 .slots { list-style: none; padding: 0; margin: .5rem 0; display: grid; gap: .3rem; }
 .slots li { display: grid; grid-template-columns: 1fr auto auto; gap: 1rem; align-items: center; padding: .4rem .6rem; background: #fff; border: 1.5px solid var(--mist); border-radius: 6px; }
 @media (max-width: 30rem) { .slots li { grid-template-columns: 1fr auto; } .slots li span:first-child { grid-column: 1 / -1; } }
+
+/* ---- Landing page (signed-out "/") ----
+   Photos go in public/landing/ (hero.jpg, seoul.jpg, busan.jpg, jeju.jpg).
+   Without them, each block falls back to a colour gradient, so nothing looks broken. */
+.landing { --band-pad: clamp(2.5rem, 6vw, 4.5rem) clamp(1rem, 5vw, 3rem); }
+.landing h2 { font-size: clamp(1.5rem, 3vw, 2rem); margin-bottom: 1.5rem; }
+.landing h3 { font-size: 1.15rem; margin: 0 0 .35rem; }
+.landing p { margin: 0; }
+
+.hero {
+  color: #fff;
+  background:
+    linear-gradient(100deg, rgba(18, 38, 58, .92) 0%, rgba(18, 38, 58, .7) 50%, rgba(31, 95, 168, .35) 100%),
+    url("/landing/hero.jpg") center / cover no-repeat,
+    linear-gradient(135deg, var(--ink), var(--harbor));
+  padding: clamp(3.5rem, 10vw, 7rem) 0;
+}
+/* Same width and side padding as the bands below, so the text lines up. */
+.hero-inner { max-width: 76rem; margin: 0 auto; padding-inline: clamp(1rem, 5vw, 3rem); }
+.hero h1, .hero .lead { max-width: 40rem; }
+.hero .eyebrow { display: inline-block; background: var(--tactile); color: var(--ink); font-weight: 700; padding: .2rem .7rem; border-radius: 999px; margin-bottom: 1rem; }
+.hero h1 { font-size: clamp(2rem, 5vw, 3.25rem); line-height: 1.1; margin-bottom: 1rem; }
+.hero .lead { font-size: clamp(1.05rem, 2vw, 1.25rem); max-width: 36rem; opacity: .95; }
+.hero-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
+.btn.cta { background: var(--tactile); color: var(--ink); border-color: var(--tactile); font-weight: 700; font-size: 1.05rem; padding-inline: 1.5rem; }
+.btn.cta:hover { background: #ffd447; }
+.btn.light { color: #fff; border-color: #fff; }
+.btn.light:hover { background: rgba(255, 255, 255, .15); }
+.hero :focus-visible { outline-color: var(--tactile); }
+
+/* Tactile paving strip: the app's visual signature. */
+.paving { height: 14px; background: radial-gradient(circle, rgba(18, 38, 58, .55) 2px, transparent 2.5px) 0 0 / 11px 11px, var(--tactile); }
+
+.band { padding: var(--band-pad); max-width: 76rem; margin: 0 auto; }
+.band.alt { max-width: none; background: #fff; border-block: 2px solid var(--mist); }
+.band.alt > * { max-width: 70rem; margin-inline: auto; }
+
+.features { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 1.25rem; }
+.features li { background: #fff; border: 2px solid var(--mist); border-radius: 12px; padding: 1.5rem; }
+.feature-icon { display: inline-grid; place-items: center; width: 3.25rem; height: 3.25rem; border-radius: 12px; background: var(--harbor); color: #fff; margin-bottom: 1rem; }
+.features p, .how p, .city-text p { color: var(--muted); }
+
+.how { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: 1.25rem; counter-reset: how; }
+.how li { counter-increment: how; border-top: 6px solid var(--tactile); padding-top: 1rem; }
+.how li::before { content: counter(how); display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: var(--ink); color: #fff; font-weight: 700; margin-bottom: .75rem; }
+
+.cities { list-style: none; padding: 0; margin: 0; display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 18rem), 1fr)); gap: 1.25rem; }
+.city { background: #fff; border: 2px solid var(--mist); border-radius: 12px; overflow: hidden; }
+.city-photo { aspect-ratio: 16 / 10; background-size: cover; background-position: center; }
+.city-seoul .city-photo { background-image: url("/landing/seoul.jpg"), linear-gradient(135deg, #1f5fa8, #12263a); }
+.city-busan .city-photo { background-image: url("/landing/busan.jpg"), linear-gradient(135deg, #2a9d8f, #1f5fa8); }
+.city-jeju .city-photo { background-image: url("/landing/jeju.jpg"), linear-gradient(135deg, #f2c230, #e07a2f); }
+.city-text { padding: 1.1rem 1.25rem 1.3rem; }
+
+.guide-band { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.25rem; }
+.guide-band h2 { margin-bottom: .4rem; }
+.guide-band > div { flex: 1 1 22rem; }
+
+.landing-foot { padding: 1.5rem clamp(1rem, 5vw, 3rem) 2.5rem; border-top: 2px solid var(--mist); text-align: center; display: grid; gap: .5rem; }
+.sos { display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .6rem; font-weight: 600; }
+.sos strong { background: var(--danger); color: #fff; padding: .15rem .6rem; border-radius: 6px; letter-spacing: .05em; }
