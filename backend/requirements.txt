@@ -6,6 +6,5 @@ alembic
 pwdlib[argon2]
 pyjwt
 google-genai
-openai
 requests
 pytest

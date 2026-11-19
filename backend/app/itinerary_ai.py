@@ -20,23 +20,6 @@ logger = logging.getLogger(__name__)
 RETRY_WAITS = (10, 30, 60)
 
 
-def engines_to_try(settings) -> list[tuple[str, str | None]]:
-    """(provider, model) pairs to take turns with: Gemini first, then the Gemini fallback
-    model and OpenAI, each only when it's set up."""
-    engines = [("gemini", settings.gemini_model)]
-    if settings.gemini_fallback_model and settings.gemini_fallback_model != settings.gemini_model:
-        engines.append(("gemini", settings.gemini_fallback_model))
-    if settings.openai_api_key and settings.openai_model:
-        engines.append(("openai", settings.openai_model))
-    return engines
-
-
-def take_turns(options: list):
-    """A function that returns the next option each time it's called: A, B, A, B, ..."""
-    turn = iter(range(10**6))
-    return lambda: options[next(turn) % len(options)]
-
-
 def call_with_retries(fn, waits=RETRY_WAITS, sleep=time.sleep):
     """Call fn(); if it fails, wait and try again, once per entry in waits.
 
@@ -147,16 +130,7 @@ def fill_with_ai_draft(itinerary_id: int) -> None:
         db.rollback()
 
         try:
-            from app.config import settings
-
-            next_engine = take_turns(engines_to_try(settings))
-
-            def ask():
-                provider, model = next_engine()
-                logger.warning("Asking %s (%s) for itinerary %s", provider, model, itinerary_id)
-                return generate_itinerary(**request, provider=provider, model=model)
-
-            stops = call_with_retries(ask)
+            stops = call_with_retries(lambda: generate_itinerary(**request))
         except Exception:  # whatever goes wrong, the itinerary just stays empty
             logger.exception("AI draft failed for itinerary %s", itinerary_id)
             return

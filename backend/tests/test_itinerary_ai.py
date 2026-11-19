@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.itinerary_ai import ai_request, engines_to_try, take_turns, call_with_retries, extra_requests, parse_stops
+from app.itinerary_ai import ai_request, call_with_retries, extra_requests, parse_stops
 
 NOV_10 = dt.date(2026, 11, 10)
 NOV_11 = dt.date(2026, 11, 11)
@@ -104,37 +104,3 @@ def test_the_ai_request_is_plain_values():
     assert request["region"] == "BUSAN" and request["start_date"] == "2026-11-10"
     assert request["start_time"] is None and request["mobility_level"] == "SLOW_WALK"
     assert request["guide_languages"] == ["en", "ko"]
-
-
-def test_models_take_turns_so_a_busy_one_is_not_tried_twice_in_a_row():
-    next_model = take_turns(["main", "backup"])
-    assert [next_model() for _ in range(5)] == ["main", "backup", "main", "backup", "main"]
-
-
-def test_with_one_model_every_try_uses_it():
-    next_model = take_turns(["main"])
-    assert [next_model() for _ in range(3)] == ["main", "main", "main"]
-
-
-def settings_with(**values):
-    base = dict(gemini_model="gemini-main", gemini_fallback_model=None, openai_api_key=None, openai_model=None)
-    base.update(values)
-    return SimpleNamespace(**base)
-
-
-def test_only_gemini_when_nothing_else_is_set_up():
-    assert engines_to_try(settings_with()) == [("gemini", "gemini-main")]
-
-
-def test_openai_is_added_only_with_a_key_and_a_model():
-    assert engines_to_try(settings_with(openai_model="gpt-x")) == [("gemini", "gemini-main")]
-    assert engines_to_try(settings_with(openai_api_key="k", openai_model="gpt-x")) == [
-        ("gemini", "gemini-main"),
-        ("openai", "gpt-x"),
-    ]
-
-
-def test_all_three_take_turns():
-    engines = engines_to_try(settings_with(gemini_fallback_model="gemini-b", openai_api_key="k", openai_model="gpt-x"))
-    next_engine = take_turns(engines)
-    assert [next_engine()[0] for _ in range(4)] == ["gemini", "gemini", "openai", "gemini"]
