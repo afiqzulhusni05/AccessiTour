@@ -12,6 +12,7 @@ from app.routers import (
     itineraries,
     itinerary,
     matching,
+    places,
     tourists,
     trips,
     users,
@@ -35,6 +36,7 @@ app.include_router(matching.router)
 app.include_router(trips.router)
 app.include_router(bookings.router)
 app.include_router(itineraries.router)
+app.include_router(places.router)
 
 # AI itinerary generation endpoint
 app.include_router(itinerary.router)
