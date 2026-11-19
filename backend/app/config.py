@@ -14,5 +14,9 @@ class Settings(BaseSettings):
     gemini_api_key: str | None = None
     kakao_rest_api_key: str | None = None
 
+    # data.go.kr key (Decoding version), used for emergency hospitals.
+    # Without it, the emergency endpoint answers 503; everything else still works.
+    data_go_kr_key: str | None = None
+
 
 settings = Settings()

@@ -8,6 +8,7 @@ from app.database import get_db
 from app.routers import (
     auth,
     bookings,
+    emergency,
     guides,
     itineraries,
     itinerary,
@@ -37,6 +38,7 @@ app.include_router(trips.router)
 app.include_router(bookings.router)
 app.include_router(itineraries.router)
 app.include_router(places.router)
+app.include_router(emergency.router)
 
 # AI itinerary generation endpoint
 app.include_router(itinerary.router)
