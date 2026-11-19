@@ -8,15 +8,13 @@ to the plan, so it keeps them.
 
 import datetime as dt
 
-from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
-from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user
 from app.enums import BookingStatus, EditedBy, MobilityLevel
-from app.itinerary_ai import fill_with_ai_draft
 from app.itinerary_rules import HAS_ITINERARY, PLANNING, date_problem, status_for_approvals, time_problem
 from app.models import Booking, Guide, Itinerary, ItineraryComment, ItineraryItem, Tourist, Trip, TripSegment, User, UserRole
 from app.routers.bookings import get_my_booking, to_read
@@ -94,17 +92,6 @@ def read(db: Session, itinerary: Itinerary, booking: Booking, user: User) -> Iti
     )
 
 
-def read_and_release(db: Session, itinerary: Itinerary, booking: Booking, user: User) -> ItineraryRead:
-    """Like read(), then gives the database connection back straight away.
-
-    The AI draft runs in the background after this response, and this request's
-    session would otherwise stay open (idle in a transaction) until it finishes,
-    which can be minutes. Neon closes such connections, so release it now."""
-    result = read(db, itinerary, booking, user)
-    db.close()
-    return result
-
-
 # ---------- Endpoints ----------
 
 
@@ -138,13 +125,9 @@ def list_my_itineraries(user: User = Depends(get_current_user), db: Session = De
 
 
 @router.post("", response_model=ItineraryRead)
-def open_itinerary(
-    data: ItineraryCreate, background: BackgroundTasks,
-    user: User = Depends(get_current_user), db: Session = Depends(get_db),
-):
-    """The itinerary for an accepted booking, created the first time either side opens it.
-    It starts empty; the AI's first draft is added in the background a little later
-    (see app/itinerary_ai.py), so this answers straight away."""
+def open_itinerary(data: ItineraryCreate, user: User = Depends(get_current_user), db: Session = Depends(get_db)):
+    """The itinerary for an accepted booking, created empty the first time either side opens it.
+    (When the AI service is merged, it can fill in the first draft here.)"""
     booking = get_my_booking(db, user, data.booking_id)
     itinerary = db.scalar(select(Itinerary).where(Itinerary.booking_id == booking.id))
     if itinerary is None:
@@ -159,33 +142,9 @@ def open_itinerary(
         db.add(itinerary)
         if booking.status == BookingStatus.ACCEPTED:
             booking.status = BookingStatus.ITINERARY_DRAFT
-        try:
-            db.commit()
-        except IntegrityError:
-            # Both sides opened it at the same moment and the other request created it first
-            db.rollback()
-            itinerary = db.scalar(select(Itinerary).where(Itinerary.booking_id == booking.id))
-            db.refresh(booking)
-        else:
-            db.refresh(itinerary)
-            background.add_task(fill_with_ai_draft, itinerary.id)
-    return read_and_release(db, itinerary, booking, user)
-
-
-@router.post("/{itinerary_id}/ai-draft", response_model=ItineraryRead, status_code=202)
-def request_ai_draft(
-    itinerary_id: int, background: BackgroundTasks,
-    user: User = Depends(get_current_user), db: Session = Depends(get_db),
-):
-    """Ask the AI for a first draft again, for example after it was too busy the first time.
-    Only for an itinerary that still has no stops; the stops appear a little later."""
-    itinerary, booking = get_my_itinerary(db, user, itinerary_id)
-    check_editable(booking)
-    has_stops = db.scalar(select(ItineraryItem.id).where(ItineraryItem.itinerary_id == itinerary.id))
-    if has_stops is not None:
-        raise HTTPException(status_code=409, detail="This itinerary already has stops")
-    background.add_task(fill_with_ai_draft, itinerary.id)
-    return read_and_release(db, itinerary, booking, user)
+        db.commit()
+        db.refresh(itinerary)
+    return read(db, itinerary, booking, user)
 
 
 @router.get("/{itinerary_id}", response_model=ItineraryRead)
