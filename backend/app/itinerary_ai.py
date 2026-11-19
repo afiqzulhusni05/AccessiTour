@@ -84,29 +84,6 @@ def hhmm(value: dt.time | None) -> str | None:
     return value.strftime("%H:%M") if value else None
 
 
-def ai_request(segment, booking, tourist, guide) -> dict:
-    """Everything the AI needs, copied into plain values, so the database can be
-    let go of while the AI works (that can take minutes when Gemini is busy)."""
-    return dict(
-        region=segment.region.value,
-        start_date=booking.start_date.isoformat(),
-        end_date=booking.end_date.isoformat(),
-        service_type=booking.service_type.value,
-        start_time=hhmm(booking.start_time),
-        end_time=hhmm(booking.end_time),
-        group_size=segment.group_size,
-        transport_preference=segment.transport_preference.value,
-        attributes=list(segment.attributes),
-        budget=segment.budget,
-        preferred_language=tourist.preferred_language.value,
-        mobility_level=tourist.mobility_level.value,
-        dietary=list(tourist.dietary),
-        dietary_notes=tourist.dietary_notes,
-        special_requests=extra_requests(tourist),
-        guide_languages=list(guide.languages),
-    )
-
-
 def fill_with_ai_draft(itinerary_id: int) -> None:
     # Imported here, so parse_stops() can be tested without a database or the AI package
     from app.database import SessionLocal
@@ -124,13 +101,25 @@ def fill_with_ai_draft(itinerary_id: int) -> None:
         tourist = db.get(Tourist, db.get(Trip, segment.trip_id).tourist_id)
         guide = db.get(Guide, booking.guide_id)
 
-        request = ai_request(segment, booking, tourist, guide)
-        # End the read transaction before the slow AI call. Neon closes a connection
-        # that sits "idle in transaction" too long, which made the draft fail.
-        db.rollback()
-
         try:
-            stops = call_with_retries(lambda: generate_itinerary(**request))
+            stops = call_with_retries(lambda: generate_itinerary(
+                region=segment.region.value,
+                start_date=booking.start_date.isoformat(),
+                end_date=booking.end_date.isoformat(),
+                service_type=booking.service_type.value,
+                start_time=hhmm(booking.start_time),
+                end_time=hhmm(booking.end_time),
+                group_size=segment.group_size,
+                transport_preference=segment.transport_preference.value,
+                attributes=list(segment.attributes),
+                budget=segment.budget,
+                preferred_language=tourist.preferred_language.value,
+                mobility_level=tourist.mobility_level.value,
+                dietary=list(tourist.dietary),
+                dietary_notes=tourist.dietary_notes,
+                special_requests=extra_requests(tourist),
+                guide_languages=list(guide.languages),
+            ))
         except Exception:  # whatever goes wrong, the itinerary just stays empty
             logger.exception("AI draft failed for itinerary %s", itinerary_id)
             return
