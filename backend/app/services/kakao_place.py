@@ -131,12 +131,13 @@ def search_place_candidates(
 
         response.raise_for_status()
 
-    except requests.RequestException as error:
+        data = response.json()
+
+    # ValueError: Kakao answered with something that isn't JSON
+    except (requests.RequestException, ValueError) as error:
         raise RuntimeError(
             f"Kakao place search failed: {error}"
         ) from error
-
-    data = response.json()
 
     return data.get("documents", [])
 

@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.itinerary_ai import call_with_retries, extra_requests, parse_stops
+from app.ai_draft_worker import call_with_retries, extra_requests, parse_stops
 
 NOV_10 = dt.date(2026, 11, 10)
 NOV_11 = dt.date(2026, 11, 11)

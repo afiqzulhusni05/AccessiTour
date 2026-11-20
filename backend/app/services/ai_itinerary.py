@@ -1,4 +1,5 @@
 import json
+import logging
 from typing import Literal, Optional
 
 import requests
@@ -14,6 +15,8 @@ from app.config import settings
 from app.services.kakao_place import (
     find_verified_place,
 )
+
+logger = logging.getLogger(__name__)
 
 BAZE_BASE_URL = "https://api.baze.co/v1/gateway"
 BAZE_MODEL = "gpt-6-luna"
@@ -194,8 +197,11 @@ def generate_with_baze(prompt: str) -> GeneratedStops:
         )
 
         if not response.ok:
-            print("BAZE status:", response.status_code)
-            print("BAZE response:", response.text)
+            logger.warning(
+                "BAZE returned %s: %s",
+                response.status_code,
+                response.text[:500],
+            )
 
         response.raise_for_status()
 
@@ -296,10 +302,12 @@ def attach_verified_coordinates(
         latitude = None
         longitude = None
 
-        print("\n=== PLACE DEBUG ===")
-        print("English name:", stop.place_name)
-        print("Korean name:", stop.place_name_ko)
-        print("Category:", stop.place_category)
+        logger.debug(
+            "Checking place %r (Korean %r, category %s)",
+            stop.place_name,
+            stop.place_name_ko,
+            stop.place_category,
+        )
 
         place = find_verified_place(
             names=[
@@ -310,14 +318,7 @@ def attach_verified_coordinates(
             place_category=stop.place_category,
         )
 
-        if place:
-            print("Matched Kakao place:", place["kakao_place_name"])
-            print("Match score:", place["match_score"])
-            print("Coordinates:", place["latitude"], place["longitude"])
-        else:
-            print("Matched Kakao place: NONE")
-            print("Coordinates: NONE")
-
+        # kakao_place.py logs whether the place was verified
         if place:
             latitude = place["latitude"]
             longitude = place["longitude"]
@@ -617,19 +618,20 @@ The backend will separately handle:
     # Generate with primary AI provider
     # --------------------------------------------------
 
-    print("Trying GPT-6 Luna...")
+    logger.debug("Trying GPT-6 Luna")
 
     try:
         generated_stops = generate_with_baze(prompt)
-        print("GPT-6 Luna succeeded.")
+        logger.info("Itinerary generated with GPT-6 Luna")
 
-    except RuntimeError as error:
-        print("GPT-6 Luna failed:")
-        print(error)
-        print("Falling back to Gemini...")
+    except Exception as error:
+        logger.warning(
+            "GPT-6 Luna failed (%s); falling back to Gemini",
+            error,
+        )
 
         generated_stops = generate_with_gemini(prompt)
-        print("Gemini succeeded.")
+        logger.info("Itinerary generated with Gemini")
 
     # Kakao verifies every generated place
     # and fills coordinates only when confident.

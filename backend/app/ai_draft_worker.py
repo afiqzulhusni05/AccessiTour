@@ -15,8 +15,11 @@ import time
 
 logger = logging.getLogger(__name__)
 
-# Gemini sometimes answers "high demand, try again later". Wait and try again
-# this many seconds apart before giving up (4 tries, about 1.5 minutes in all).
+# If the AI fails, wait and try again: the first try plus 3 retries, waiting
+# 10, 30 and 60 seconds between them. Each retry runs the whole AI generation
+# again, starting with GPT-6 Luna and falling back to Gemini if Luna fails.
+# The waits add up to 100 seconds, but the total time is longer, because each
+# try also spends time waiting for the AI providers to answer.
 RETRY_WAITS = (10, 30, 60)
 
 
@@ -86,6 +89,8 @@ def hhmm(value: dt.time | None) -> str | None:
 
 def fill_with_ai_draft(itinerary_id: int) -> None:
     # Imported here, so parse_stops() can be tested without a database or the AI package
+    from sqlalchemy import select
+
     from app.database import SessionLocal
     from app.enums import EditedBy
     from app.itinerary_rules import PLANNING
@@ -124,10 +129,20 @@ def fill_with_ai_draft(itinerary_id: int) -> None:
             logger.exception("AI draft failed for itinerary %s", itinerary_id)
             return
 
-        # The plan may have moved on while the AI was working (cancelled, or approved as it was)
+        # The plan may have moved on while the AI was working (cancelled, approved as it was,
+        # or given stops by a person or another AI draft). Lock the itinerary row until the
+        # commit below, so two drafts finishing together can't both be saved.
         db.refresh(booking)
-        db.refresh(itinerary)
-        if booking.status not in PLANNING or itinerary.approved_by_tourist or itinerary.approved_by_guide:
+        db.refresh(itinerary, with_for_update=True)
+        has_stops = db.scalar(
+            select(ItineraryItem.id).where(ItineraryItem.itinerary_id == itinerary.id).limit(1)
+        )
+        if (
+            booking.status not in PLANNING
+            or itinerary.approved_by_tourist
+            or itinerary.approved_by_guide
+            or has_stops is not None
+        ):
             logger.info("Itinerary %s changed while the AI was working; draft not added", itinerary_id)
             return
 

@@ -16,7 +16,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.deps import get_current_user
 from app.enums import BookingStatus, EditedBy, MobilityLevel
-from app.itinerary_ai import fill_with_ai_draft
+from app.ai_draft_worker import fill_with_ai_draft
 from app.itinerary_rules import HAS_ITINERARY, PLANNING, date_problem, status_for_approvals, time_problem
 from app.models import Booking, Guide, Itinerary, ItineraryComment, ItineraryItem, Tourist, Trip, TripSegment, User, UserRole
 from app.routers.bookings import get_my_booking, to_read
@@ -133,7 +133,7 @@ def open_itinerary(
 ):
     """The itinerary for an accepted booking, created the first time either side opens it.
     It starts empty; the AI's first draft is added in the background a little later
-    (see app/itinerary_ai.py), so this answers straight away."""
+    (see app/ai_draft_worker.py), so this answers straight away."""
     booking = get_my_booking(db, user, data.booking_id)
     itinerary = db.scalar(select(Itinerary).where(Itinerary.booking_id == booking.id))
     if itinerary is None:
@@ -142,8 +142,6 @@ def open_itinerary(
         segment = db.get(TripSegment, booking.segment_id)
         trip = db.get(Trip, segment.trip_id)
         tourist = db.get(Tourist, trip.tourist_id)
-        guide = db.get(Guide, booking.guide_id)
-        
         itinerary = Itinerary(
             booking_id=booking.id,
             needs_accessibility_check=tourist.mobility_level != MobilityLevel.NORMAL,
