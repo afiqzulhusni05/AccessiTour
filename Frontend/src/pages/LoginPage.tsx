@@ -42,7 +42,6 @@ export default function LoginPage() {
         <button type="submit" className="primary" disabled={busy}>{t("auth.signIn")}</button>
       </form>
       <p className="switch">{t("auth.noAccount")} <Link to="/signup" state={{ from }}>{t("auth.signUp")}</Link></p>
-      <p className="muted">{t("auth.adminNote")}</p>
     </div>
   );
 }
