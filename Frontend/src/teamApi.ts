@@ -294,3 +294,29 @@ export const checkItem = (token: string, id: number, itemId: number) => call<Tea
 export const addComment = (token: string, id: number, body: string, itemId: number | null) =>
   call<TeamItinerary>("POST", `${IT}/${id}/comments`, token, { body, item_id: itemId });
 export const approve = (token: string, id: number) => call<TeamItinerary>("POST", `${IT}/${id}/approve`, token);
+
+// ---------- help near a point (restrooms, restaurants, emergency hospitals)
+
+export interface TeamRestroom {
+  id: number; name: string; address: string | null; address_en: string | null; latitude: number; longitude: number;
+  distance_m: number; opening_hours: string | null; phone: string | null;
+  accessible_toilets: number; child_toilets: number; has_nursing_room: boolean;
+}
+export interface TeamRestaurant {
+  content_id: string | null; name: string; cuisine: string; address: string | null; phone: string | null;
+  latitude: number; longitude: number; distance_m: number | null; image_url: string | null; thumbnail_url: string | null;
+}
+export interface TeamHospital {
+  hpid: string | null; name: string; kind: string | null; address: string | null; phone: string | null;
+  latitude: number; longitude: number; distance_m: number | null;
+}
+export interface TeamEmergency { emergency_number: string; tourist_helpline: string; hospitals: TeamHospital[] }
+
+const near = (lat: number, lng: number) => `lat=${lat.toFixed(6)}&lng=${lng.toFixed(6)}`;
+export const nearbyRestrooms = (token: string, lat: number, lng: number, accessibleOnly: boolean) =>
+  call<TeamRestroom[]>("GET", `/places/restrooms?${near(lat, lng)}&radius_m=1500&limit=15${accessibleOnly ? "&accessible_only=true" : ""}`, token);
+export const nearbyRestaurants = (token: string, lat: number, lng: number) =>
+  call<TeamRestaurant[]>("GET", `/places/restaurants?${near(lat, lng)}&radius_m=1500&limit=15`, token);
+/** No sign-in needed: nobody should have to log in during an emergency. */
+export const nearbyHospitals = (lat: number, lng: number) =>
+  call<TeamEmergency>("GET", `/emergency/hospitals?${near(lat, lng)}&limit=5`, null);

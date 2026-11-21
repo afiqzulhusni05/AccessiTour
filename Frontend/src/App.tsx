@@ -3,6 +3,8 @@ import { Link, Navigate, Route, Routes, useLocation, useParams } from "react-rou
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./AuthContext";
 import Shell from "./Shell";
+import LanguageMenu from "./LanguageMenu";
+import SosButton from "./SosButton";
 import GuideHome from "./pages/GuideHome";
 import BookingsPage from "./pages/BookingsPage";
 import GuideProfilePage from "./pages/GuideProfilePage";
@@ -56,7 +58,7 @@ const TOURIST: AccountRole[] = ["tourist"];
 const PEOPLE: AccountRole[] = ["tourist", "guide"];
 
 export default function App() {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { user } = useAuth();
 
   const pages = (
@@ -86,13 +88,12 @@ export default function App() {
         <>
           <header className="top">
             <Link to="/" className="brand">{t("app")}</Link>
-            <button type="button" className="ghost" onClick={() => i18n.changeLanguage(i18n.language === "en" ? "ko" : "en")} lang={i18n.language === "en" ? "ko" : "en"}>
-              {t("switchTo")}
-            </button>
+            <LanguageMenu onDark />
           </header>
           <main id="main">{pages}</main>
         </>
       )}
+      <SosButton />
     </>
   );
 }

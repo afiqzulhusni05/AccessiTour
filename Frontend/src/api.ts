@@ -240,3 +240,11 @@ export async function placeNameAt(lat: number, lng: number, lang: string): Promi
     return "";
   }
 }
+
+// ---------- help near a point
+
+export type { TeamRestroom as Restroom, TeamRestaurant as Restaurant, TeamHospital as Hospital } from "./teamApi";
+export const getNearbyRestrooms = (lat: number, lng: number, accessibleOnly: boolean) =>
+  authed((tok) => team.nearbyRestrooms(tok, lat, lng, accessibleOnly));
+export const getNearbyRestaurants = (lat: number, lng: number) => authed((tok) => team.nearbyRestaurants(tok, lat, lng));
+export const getNearbyHospitals = (lat: number, lng: number) => team.nearbyHospitals(lat, lng);
