@@ -173,6 +173,7 @@ export interface SignupRequest {
 export interface ItinerarySummary {
   plan_id: number | null;
   id: number;
+  trip_id?: number; // the planned trip this itinerary belongs to (team API)
   guide_name: string;
   guide_name_ko: string;
   owner_name: string;
