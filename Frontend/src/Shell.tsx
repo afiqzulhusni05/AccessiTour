@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./AuthContext";
+import LanguageMenu from "./LanguageMenu";
 import type { AccountRole, User } from "./types";
 
 const ICONS = {
@@ -37,7 +38,7 @@ const MENU: Record<AccountRole, [string, string, keyof typeof ICONS, boolean][]>
 
 /** Layout for signed-in pages: sidebar menu for the account's role, top bar with the account and language. */
 export default function Shell({ user, children }: { user: User; children: ReactNode }) {
-  const { t, i18n } = useTranslation();
+  const { t } = useTranslation();
   const { logout } = useAuth();
   const navigate = useNavigate();
   const signOut = () => {
@@ -59,9 +60,7 @@ export default function Shell({ user, children }: { user: User; children: ReactN
         <header className="topbar">
           {/* pages add their own buttons here (the itinerary chat icon) */}
           <div id="top-actions" />
-          <button type="button" className="ghost small" onClick={() => i18n.changeLanguage(i18n.language === "en" ? "ko" : "en")} lang={i18n.language === "en" ? "ko" : "en"}>
-            {t("switchTo")}
-          </button>
+          <LanguageMenu />
           <span className="whoami">
             <span className="avatar" aria-hidden="true">{user.display_name.slice(0, 1).toUpperCase()}</span>
             <span>{user.display_name}<small>{t(`role.${user.role}`)}</small></span>

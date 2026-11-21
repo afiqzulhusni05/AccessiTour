@@ -5,11 +5,12 @@ import "leaflet/dist/leaflet.css";
 import { getRecommendations, placeNameAt } from "./api";
 import { cityById } from "./regions";
 import { StopForm } from "./Stop";
+import { KINDS, loadNearby, PIN_TEXT, type Kind, type NearbyPlace } from "./nearby";
 import type { Itinerary, Recommendation, Recommendations, StopFields } from "./types";
 
 const KOREA = [36.3, 127.8, 7]; // lat, lng, zoom when the trip's city is unknown
 
-const pin = (kind: "stop" | "rec" | "pick", text: string) =>
+const pin = (kind: "stop" | "rec" | "pick" | Kind, text: string) =>
   L.divIcon({ className: `pin ${kind}`, html: `<span>${text}</span>`, iconSize: [28, 28], iconAnchor: [14, 14] });
 
 // Leaflet treats tooltip strings as HTML; place names come from users and the LLM, so pass a text node.
@@ -29,12 +30,17 @@ export default function TripMap({ itinerary: it, editable, busy, onAdd }: {
   const { t, i18n } = useTranslation();
   const box = useRef<HTMLDivElement>(null);
   const map = useRef<L.Map>();
-  const layers = useRef({ stops: L.layerGroup(), recs: L.layerGroup(), pick: L.layerGroup() });
+  const layers = useRef({ near: L.layerGroup(), stops: L.layerGroup(), recs: L.layerGroup(), pick: L.layerGroup() });
   const fitted = useRef(false);
   const [recs, setRecs] = useState<Recommendations | null>(null);
   const [recState, setRecState] = useState<"idle" | "loading" | "error">("idle");
   const [draft, setDraft] = useState<StopFields | null>(null); // the place being added
   const [picking, setPicking] = useState(false);
+  // Help nearby: which kinds are switched on, what was found, and whether each is loading.
+  const [shown, setShown] = useState<Record<Kind, boolean>>({ restrooms: false, restaurants: false, hospitals: false });
+  const [found, setFound] = useState<Partial<Record<Kind, NearbyPlace[]>>>({});
+  const [nearState, setNearState] = useState<Partial<Record<Kind, "loading" | "error">>>({});
+  const [accessibleOnly, setAccessibleOnly] = useState(true);
 
   // Map clicks are wired once, so they read the latest handler through a ref.
   const onPick = useRef<(lat: number, lng: number) => void>(() => {});
@@ -93,6 +99,37 @@ export default function TripMap({ itinerary: it, editable, busy, onAdd }: {
     }
   }, [draft]);
 
+  useEffect(() => {
+    const group = layers.current.near.clearLayers();
+    KINDS.filter((k) => shown[k]).forEach((k) => {
+      (found[k] ?? []).forEach((p) => {
+        L.marker([p.lat, p.lng], { icon: pin(k, PIN_TEXT[k]), keyboard: false })
+          .bindTooltip(label([p.name, ...p.details.slice(0, 1)].join(" · ")))
+          .addTo(group);
+      });
+    });
+  }, [shown, found]);
+
+  const fetchNearby = async (kind: Kind, onlyAccessible = accessibleOnly) => {
+    const c = map.current!.getCenter();
+    setNearState((s) => ({ ...s, [kind]: "loading" }));
+    try {
+      const places = await loadNearby(kind, c.lat, c.lng, onlyAccessible);
+      setFound((f) => ({ ...f, [kind]: places }));
+      setNearState((s) => ({ ...s, [kind]: undefined }));
+    } catch {
+      setNearState((s) => ({ ...s, [kind]: "error" }));
+    }
+  };
+
+  const toggleNearby = (kind: Kind) => {
+    const on = !shown[kind];
+    setShown((s) => ({ ...s, [kind]: on }));
+    if (on) fetchNearby(kind);
+  };
+
+  const refreshNearby = () => KINDS.filter((k) => shown[k]).forEach((k) => fetchNearby(k));
+
   const choose = (r: Recommendation) => {
     setPicking(false);
     setDraft({ day_number: 1, start_time: "12:00", ...r });
@@ -120,6 +157,50 @@ export default function TripMap({ itinerary: it, editable, busy, onAdd }: {
       <h2>{t("map.title")}</h2>
       {editable && <p className="muted">{t("map.hint")}</p>}
       <div ref={box} className={"tripmap" + (editable ? "" : " readonly")} aria-label={t("map.title")} />
+
+      <div className="nearby">
+        <h3>{t("near.title")}</h3>
+        <p className="muted">{t("near.hint")}</p>
+        <div className="kinds">
+          {KINDS.map((k) => (
+            <button key={k} type="button" className="small" aria-pressed={shown[k]} onClick={() => toggleNearby(k)}>
+              <span className={`dot ${k}`} aria-hidden="true" />{t(`near.kinds.${k}`)}
+            </button>
+          ))}
+          {KINDS.some((k) => shown[k]) && (
+            <button type="button" className="ghost small" onClick={refreshNearby}>{t("near.refresh")}</button>
+          )}
+        </div>
+        {shown.restrooms && (
+          <label className="check">
+            <input type="checkbox" checked={accessibleOnly}
+              onChange={(e) => { setAccessibleOnly(e.target.checked); fetchNearby("restrooms", e.target.checked); }} />
+            {t("near.accessibleOnly")}
+          </label>
+        )}
+        {KINDS.filter((k) => shown[k]).map((k) => (
+          <div key={k}>
+            <h3>{t(`near.kinds.${k}`)}</h3>
+            {nearState[k] === "loading" && <p role="status" className="muted">{t("near.loading")}</p>}
+            {nearState[k] === "error" && <p role="alert" className="error">{t("near.failed")}</p>}
+            {!nearState[k] && found[k]?.length === 0 && <p className="muted">{t("near.none")}</p>}
+            {!nearState[k] && !!found[k]?.length && (
+              <ul className="nearby-list">
+                {found[k]!.slice(0, 6).map((p) => (
+                  <li key={p.key}>
+                    {p.image && <img src={p.image} alt="" loading="lazy" />}
+                    <div>
+                      <strong>{p.name}</strong>
+                      {p.details.map((d) => <small key={d}>{d}</small>)}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            )}
+          </div>
+        ))}
+        {KINDS.some((k) => shown[k]) && <p className="muted"><small>{t("near.source")}</small></p>}
+      </div>
 
       {editable && (
         <>

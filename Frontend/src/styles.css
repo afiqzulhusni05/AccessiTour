@@ -495,3 +495,47 @@ ol.plain { margin: 0; padding-left: 1.2rem; font-weight: 600; }
 .landing-foot { padding: 1.5rem clamp(1rem, 5vw, 3rem) 2.5rem; border-top: 2px solid var(--mist); text-align: center; display: grid; gap: .5rem; }
 .sos { display: inline-flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: .6rem; font-weight: 600; }
 .sos strong { background: var(--danger); color: #fff; padding: .15rem .6rem; border-radius: 6px; letter-spacing: .05em; }
+
+/* ---- Language menu ---- */
+.langmenu { display: inline-flex; align-items: center; gap: .35rem; font-weight: 600; }
+.langmenu select { width: auto; min-height: 40px; padding: .3rem .5rem; border-radius: 6px; font-weight: 600; }
+.langmenu.dark { color: #fff; }
+.langmenu.dark select { background: transparent; color: #fff; border-color: #fff; }
+.langmenu.dark option { color: var(--ink); }
+
+/* ---- SOS: always reachable, bottom-right, above everything else ---- */
+.sos-fab {
+  position: fixed; right: max(1rem, env(safe-area-inset-right)); bottom: max(1rem, env(safe-area-inset-bottom)); z-index: 1000;
+  width: 64px; height: 64px; border-radius: 50%; justify-content: center; padding: 0;
+  background: var(--danger); color: #fff; border: 3px solid #fff; font-weight: 800; letter-spacing: .04em;
+  box-shadow: 0 4px 14px rgba(18, 38, 58, .35);
+}
+.sos-fab:hover { background: #8f1e18; }
+.sos-dialog { width: min(32rem, calc(100vw - 2rem)); max-height: calc(100dvh - 2rem); border: 3px solid var(--danger); border-radius: 12px; padding: 1.25rem; color: var(--ink); }
+.sos-dialog::backdrop { background: rgba(18, 38, 58, .55); }
+.sos-dialog header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: .25rem; }
+.sos-dialog h3 { margin: 1.25rem 0 .6rem; }
+.sos-numbers { list-style: none; padding: 0; margin: 1rem 0 0; display: grid; gap: .5rem; }
+.sos-numbers a { display: flex; align-items: center; gap: 1rem; min-height: 56px; padding: .5rem 1rem; border: 2px solid var(--ink); border-radius: 10px; color: var(--ink); text-decoration: none; background: #fff; }
+.sos-numbers a.urgent { background: var(--danger); border-color: var(--danger); color: #fff; }
+.sos-numbers strong { font-size: 1.6rem; min-width: 4.5rem; }
+.sos-hospitals { list-style: none; padding: 0; margin: 0; display: grid; gap: .6rem; }
+.sos-hospitals li { border: 2px solid var(--mist); border-radius: 10px; padding: .75rem .9rem; }
+.sos-hospitals small { display: block; color: var(--muted); }
+
+/* ---- Help nearby on the trip map ---- */
+.nearby { margin-top: 1rem; }
+.nearby .kinds { display: flex; flex-wrap: wrap; gap: .5rem; margin: .5rem 0; }
+.nearby .kinds button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+.nearby .kinds .dot { width: .85rem; height: .85rem; border-radius: 50%; margin-right: .45rem; border: 2px solid #fff; box-shadow: 0 0 0 1px var(--ink); }
+.nearby .check { display: flex; align-items: center; gap: .5rem; font-weight: 500; }
+.nearby .check input { width: 1.15rem; height: 1.15rem; accent-color: var(--ink); }
+.nearby-list { list-style: none; padding: 0; margin: .5rem 0 0; display: grid; gap: .5rem; }
+.nearby-list li { display: flex; gap: .75rem; align-items: center; background: #fff; border: 2px solid var(--mist); border-radius: 8px; padding: .5rem .75rem; }
+.nearby-list img { width: 56px; height: 56px; object-fit: cover; border-radius: 6px; flex: none; }
+.nearby-list small { display: block; color: var(--muted); }
+.nearby h3 { margin: 1rem 0 .25rem; font-size: 1.05rem; }
+.pin.restrooms, .dot.restrooms { background: #2a9d8f; color: #fff; }
+.pin.restaurants, .dot.restaurants { background: #e07a2f; color: #fff; }
+.pin.hospitals, .dot.hospitals { background: var(--danger); color: #fff; }
+.pin.restrooms, .pin.restaurants, .pin.hospitals { border-color: #fff; font-size: .7rem; }
