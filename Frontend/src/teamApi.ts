@@ -9,6 +9,7 @@ async function call<T>(method: string, path: string, token: string | null, body?
   if (body) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
   const res = await fetch(`${TEAM}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  if (res.status === 204) return undefined as T; // deleted: no body
   if (!res.ok) {
     const body = await res.json().catch(() => null);
     throw new ApiError(res.status, typeof body?.detail === "string" ? body.detail : "");
@@ -249,6 +250,8 @@ export interface TeamBooking {
 }
 
 export const createTrip = (token: string, segments: TeamSegmentIn[]) => call<TeamTrip>("POST", "/trips", token, { segments });
+/** Deletes a trip with its segments and finished bookings. Refused (409) while a booking is still active. */
+export const deleteTrip = (token: string, id: number) => call<void>("DELETE", `/trips/${id}`, token);
 export const listTrips = (token: string) => call<TeamTrip[]>("GET", "/trips", token);
 export const getTrip = (token: string, id: number) => call<TeamTrip>("GET", `/trips/${id}`, token);
 export const tripMatches = (token: string, id: number) =>
@@ -264,6 +267,8 @@ export async function myBookings(token: string): Promise<TeamBooking[]> {
     throw e;
   }
 }
+/** Deletes a cancelled or declined booking, for both the tourist and the guide. */
+export const deleteBooking = (token: string, id: number) => call<void>("DELETE", `/bookings/${id}`, token);
 export const bookingAction = (token: string, id: number, action: "accept" | "decline" | "cancel" | "complete") =>
   call<TeamBooking>("POST", `/bookings/${id}/${action}`, token);
 

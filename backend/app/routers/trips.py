@@ -7,7 +7,8 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.deps import require_tourist
 from app.matching import SegmentRequest, TouristNeeds, combine_whole_trip, match_guides
-from app.models import Tourist, Trip, TripSegment, User
+from app.deletion_rules import trip_delete_problem
+from app.models import Booking, Tourist, Trip, TripSegment, User
 from app.routers.matching import load_guides, summary
 from app.schemas.matching import ExcludedItem, FactorScoreRead, MatchItem
 from app.schemas.trip import (
@@ -208,3 +209,18 @@ def match_trip(
             )
 
     return TripMatchResponse(trip_id=trip.id, segments=segment_lists, whole_trip=whole_trip)
+
+@router.delete("/{trip_id}", status_code=204)
+def delete_trip(trip_id: int, user: User = Depends(require_tourist), db: Session = Depends(get_db)):
+    """Delete your own trip, once none of its bookings is still active. Its segments,
+    its cancelled, declined or completed bookings and their itineraries go with it."""
+    tourist = get_tourist(db, user)
+    trip = get_own_trip(db, tourist, trip_id)
+    statuses = list(db.scalars(
+        select(Booking.status).join(TripSegment, TripSegment.id == Booking.segment_id).where(TripSegment.trip_id == trip.id)
+    ))
+    problem = trip_delete_problem(statuses)
+    if problem:
+        raise HTTPException(status_code=409, detail=problem)
+    db.delete(trip)  # the database cascades to segments, bookings, itineraries and their stops
+    db.commit()

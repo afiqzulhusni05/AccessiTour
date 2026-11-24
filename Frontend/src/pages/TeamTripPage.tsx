@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState, type KeyboardEvent } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ApiError, getItinerary, listBookings, requestTeamBooking, teamToken } from "../api";
+import { ApiError, deleteTrip, getItinerary, listBookings, requestTeamBooking, teamToken } from "../api";
 import BookingList from "../BookingList";
 import ItineraryView from "../ItineraryView";
 import { stayDays } from "../multiCity";
@@ -19,6 +19,7 @@ const OPEN: Booking["status"][] = ["pending", "accepted", "completed"]; // a seg
 export default function TeamTripPage() {
   const { t, i18n } = useTranslation();
   const { id } = useParams();
+  const nav = useNavigate();
   const [trip, setTrip] = useState<team.TeamTrip | null>(null);
   const [matches, setMatches] = useState<Record<number, team.TeamSegmentMatches>>({}); // by segment id
   const [bookings, setBookings] = useState<Booking[]>([]);
@@ -112,7 +113,20 @@ export default function TeamTripPage() {
       {back}
       {/* short sessions are one segment per day, so a city can repeat: name each city once, in order */}
       <h1>{trip.segments.map(city).filter((c, i, all) => c !== all[i - 1]).join(" → ")}</h1>
-      <p className="muted">{trip.start_date} – {trip.end_date}</p>
+      <div className="head">
+        <p className="muted">{trip.start_date} – {trip.end_date}</p>
+        <button type="button" className="ghost small danger" onClick={async () => {
+          if (!window.confirm(t("teamtrip.confirmDelete"))) return;
+          setMsg("");
+          try {
+            await deleteTrip(trip.id);
+            nav("/trips");
+          } catch (e) {
+            setMsg(e instanceof ApiError && e.detail ? e.detail : t("teamtrip.deleteFailed"));
+          }
+        }}>{t("teamtrip.delete")}</button>
+      </div>
+      {msg && booking && <p role="alert" className="error">{msg}</p>}
       {allItems.length > 0 && <TripProgress items={allItems} title={multi ? t("multi.overall") : undefined} />}
 
       {multi && (

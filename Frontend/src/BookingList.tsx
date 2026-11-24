@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ApiError, decideBooking } from "./api";
+import { ApiError, decideBooking, deleteBooking } from "./api";
 import { useLocalized } from "./names";
 import type { AccountRole, Booking } from "./types";
 
@@ -37,6 +37,19 @@ export default function BookingList({ bookings, viewer, onChange }: {
     }
   };
 
+  const remove = async (b: Booking) => {
+    if (!window.confirm(t("booking.confirmDelete"))) return;
+    setBusy({ id: b.id, action: "delete" });
+    setErr("");
+    try {
+      await deleteBooking(b.id);
+    } catch (e) {
+      setErr(e instanceof ApiError && e.detail ? e.detail : t("booking.failed"));
+    } finally {
+      setBusy(null);
+      onChange(null); // reload either way: the booking is gone, or its state changed
+    }
+  };
   const today = new Date().toLocaleDateString("sv");
   // The team API lets the guide close a trip only once both sides approved the itinerary and the last day has come.
   const confirmed = (b: Booking) => b.team?.status === "CONFIRMED";
@@ -92,6 +105,10 @@ export default function BookingList({ bookings, viewer, onChange }: {
                 {viewer === "guide" && b.status === "accepted" && !confirmed(b) && p.end_date <= today && <p className="muted small-note">{t("booking.completeNeedsApproval")}</p>}
                 {b.team && b.status === "accepted" && (
                   <button type="button" className="ghost small danger" disabled={working} onClick={() => act(b, "cancel")}>{t("booking.cancelBooking")}</button>
+                )}
+                {b.team && (b.status === "cancelled" || b.status === "declined") && (
+                  <button type="button" className="ghost small danger" disabled={working} onClick={() => remove(b)}
+                    aria-label={`${t("booking.delete")}: ${t(`region.${p.region}`)} ${p.start_date}`}>{t("booking.delete")}</button>
                 )}
                 {b.status === "pending" && viewer !== "guide" && (
                   <button type="button" className="ghost small danger" disabled={working} onClick={() => act(b, "cancel")}>{t("booking.cancel")}</button>

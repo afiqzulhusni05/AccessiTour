@@ -123,6 +123,8 @@ export const listBookings = () => authed(async (tok) => Promise.all((await team.
 /** "complete" is the guide marking a confirmed trip as done, on or after its last day. */
 export const decideBooking = (id: number, action: "accept" | "decline" | "cancel" | "complete") =>
   authed(async (tok) => toBooking(tok, await team.bookingAction(tok, id, action)));
+export const deleteBooking = (id: number) => authed((tok) => team.deleteBooking(tok, id));
+export const deleteTrip = (id: number) => authed((tok) => team.deleteTrip(tok, id));
 /** Asks a guide to take one segment (city) of a trip. */
 export const requestTeamBooking = (segmentId: number, guideId: number) =>
   authed(async (tok) => toBooking(tok, await team.createBooking(tok, segmentId, guideId)));
