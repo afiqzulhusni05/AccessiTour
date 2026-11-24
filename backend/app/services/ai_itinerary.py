@@ -1,5 +1,8 @@
+import json
+import logging
 from typing import Literal, Optional
 
+import requests
 from google import genai
 from google.genai import errors
 from pydantic import (
@@ -13,6 +16,10 @@ from app.services.kakao_place import (
     find_verified_place,
 )
 
+logger = logging.getLogger(__name__)
+
+BAZE_BASE_URL = "https://api.baze.co/v1/gateway"
+BAZE_MODEL = "gpt-6-luna"
 
 # --------------------------------------------------
 # Public API response model
@@ -35,7 +42,7 @@ class ItineraryStops(
 
 
 # --------------------------------------------------
-# Internal Gemini output model
+# Internal AI output model
 # --------------------------------------------------
 
 class GeneratedStop(BaseModel):
@@ -66,7 +73,7 @@ class GeneratedStops(
 
 
 # --------------------------------------------------
-# Gemini place-name rules
+# AI place-name rules
 # --------------------------------------------------
 
 PLACE_NAME_RULES = """
@@ -75,8 +82,10 @@ PLACE_NAME_RULES = """
   represented by preferred_language.
 
 - place_name_ko:
-  When reasonably confident, provide the official Korean place
-  name exactly as it would normally appear on a Korean map service.
+  When reasonably confident, provide the official or commonly used Korean
+  place name exactly as it would normally appear on a Korean map service.
+  Prefer the real Korean map-search name over a literal translation or
+  simple transliteration of the English name.
 
   For restaurants or cafes, include the branch name when known.
 
@@ -109,7 +118,7 @@ PLACE_NAME_RULES = """
   activity
 
 - Do not return latitude or longitude.
-  Gemini must never guess coordinates.
+  The AI model must never guess coordinates.
   The backend will verify the place through Kakao
   and add coordinates separately.
 """
@@ -128,6 +137,149 @@ def get_client() -> genai.Client:
     return _client
 
 
+def generate_with_baze(prompt: str) -> GeneratedStops:
+    """
+    Generate itinerary stops using GPT-6 Luna
+    through the KU/BAZE Gateway.
+    """
+
+    if not settings.baze_api_key:
+        raise RuntimeError(
+            "BAZE_API_KEY is missing."
+        )
+
+    try:
+        response = requests.post(
+            f"{BAZE_BASE_URL}/chat/completions",
+            headers={
+                "Authorization": (
+                    f"Bearer {settings.baze_api_key}"
+                ),
+                "Content-Type": "application/json",
+            },
+            json={
+                "model": BAZE_MODEL,
+                "messages": [
+                {
+                    "role": "user",
+                    "content": (
+                        prompt
+                        + """
+
+            Return the final response as valid JSON only.
+
+            Use exactly this top-level structure:
+
+            {
+            "root": [
+                {
+                "date": "YYYY-MM-DD",
+                "start_time": "HH:MM",
+                "end_time": "HH:MM",
+                "place_name": "string",
+                "place_name_ko": "string or null",
+                "place_category": "FOOD, ATTRACTION, or OTHER",
+                "activity": "string"
+                }
+            ]
+            }
+
+            Do not include markdown, explanations, or text outside the JSON.
+            """
+                    ),
+                }
+            ],
+                "response_format": {
+                    "type": "json_object",
+                },
+            },
+            timeout=120,
+        )
+
+        if not response.ok:
+            logger.warning(
+                "BAZE returned %s: %s",
+                response.status_code,
+                response.text[:500],
+            )
+
+        response.raise_for_status()
+
+    except requests.RequestException as error:
+        raise RuntimeError(
+            "GPT-6 Luna is temporarily unavailable."
+        ) from error
+
+    try:
+        data = response.json()
+
+        content = (
+            data["choices"][0]["message"]["content"]
+        )
+
+        parsed = json.loads(content)
+
+        # GPT currently returns:
+        # {"root": [...]}
+        if (
+            isinstance(parsed, dict)
+            and "root" in parsed
+        ):
+            parsed = parsed["root"]
+
+        return GeneratedStops.model_validate(parsed)
+
+    except (
+        KeyError,
+        IndexError,
+        TypeError,
+        json.JSONDecodeError,
+        ValidationError,
+    ) as error:
+        raise RuntimeError(
+            "GPT-6 Luna returned an invalid itinerary structure."
+        ) from error
+def generate_with_gemini(prompt: str) -> GeneratedStops:
+    """
+    Generate itinerary stops using Gemini.
+    """
+
+    try:
+        interaction = get_client().interactions.create(
+            model="gemini-3.8-flash",
+            input=prompt,
+            response_format={
+                "type": "text",
+                "mime_type": "application/json",
+                "schema": GeneratedStops.model_json_schema(),
+            },
+        )
+
+        if not interaction.output_text:
+            raise RuntimeError(
+                "Gemini returned no itinerary."
+            )
+
+        return GeneratedStops.model_validate_json(
+            interaction.output_text
+        )
+
+    except errors.ServerError as error:
+        raise RuntimeError(
+            "Gemini is temporarily unavailable."
+        ) from error
+
+    except errors.ClientError as error:
+        raise RuntimeError(
+            "Gemini rejected the request."
+        ) from error
+
+    except ValidationError as error:
+        raise RuntimeError(
+            "Gemini returned an invalid itinerary structure."
+        ) from error
+        
+        
 # --------------------------------------------------
 # Attach verified Kakao coordinates
 # --------------------------------------------------
@@ -150,6 +302,13 @@ def attach_verified_coordinates(
         latitude = None
         longitude = None
 
+        logger.debug(
+            "Checking place %r (Korean %r, category %s)",
+            stop.place_name,
+            stop.place_name_ko,
+            stop.place_category,
+        )
+
         place = find_verified_place(
             names=[
                 stop.place_name_ko,
@@ -159,6 +318,7 @@ def attach_verified_coordinates(
             place_category=stop.place_category,
         )
 
+        # kakao_place.py logs whether the place was verified
         if place:
             latitude = place["latitude"]
             longitude = place["longitude"]
@@ -201,7 +361,7 @@ def generate_itinerary(
     guide_languages: list[str],
 ) -> list[ItineraryStop]:
 
-    # Prepare list values for Gemini.
+    # Prepare list values for AI prompt.
     attributes_text = (
         ", ".join(attributes)
         if attributes
@@ -298,7 +458,7 @@ This is a FULL_DAY trip segment.
 """
 
     # --------------------------------------------------
-    # Gemini prompt
+    # Shared AI prompt
     # --------------------------------------------------
 
     prompt = f"""
@@ -394,11 +554,23 @@ ITINERARY RULES
 - Also consider these dietary notes:
   {dietary_notes_text}.
 
+- Treat dietary requirements such as HALAL as traveler
+  preferences or requirements, not as verified facts
+  about a restaurant.
+
 - Seafood, vegetarian, pork-free or alcohol-free food
   must not automatically be considered HALAL.
 
-- Do not confidently claim that a restaurant is
-  Halal-certified unless you are reasonably confident.
+- Do not describe a restaurant, cafe, dish, or meal as
+  "Halal", "Halal-certified", or guaranteed to satisfy
+  the traveler's dietary requirement unless that status
+  has been explicitly verified by reliable external data.
+
+- If dietary compliance has not been verified, use neutral
+  wording and recommend confirming the requirement with
+  the restaurant.
+
+- Never invent Halal certification or dietary compliance.
 
 - Consider these special requests:
   {special_requests_text}.
@@ -443,54 +615,27 @@ The backend will separately handle:
 """
 
     # --------------------------------------------------
-    # Gemini request
+    # Generate with primary AI provider
     # --------------------------------------------------
 
+    logger.debug("Trying GPT-6 Luna")
+
     try:
-        interaction = get_client().interactions.create(
-            model="gemini-3.8-flash",
-            input=prompt,
-            response_format={
-                "type": "text",
-                "mime_type": "application/json",
-                "schema": (
-                    GeneratedStops.model_json_schema()
-                ),
-            },
+        generated_stops = generate_with_baze(prompt)
+        logger.info("Itinerary generated with GPT-6 Luna")
+
+    except Exception as error:
+        logger.warning(
+            "GPT-6 Luna failed (%s); falling back to Gemini",
+            error,
         )
 
-        if not interaction.output_text:
-            raise RuntimeError(
-                "Gemini returned no itinerary."
-            )
+        generated_stops = generate_with_gemini(prompt)
+        logger.info("Itinerary generated with Gemini")
 
-        # Validate Gemini's internal JSON structure.
-        generated_stops = (
-            GeneratedStops.model_validate_json(
-                interaction.output_text
-            )
-        )
-
-        # Kakao verifies each place and fills coordinates.
-        return attach_verified_coordinates(
-            generated_stops,
-            region,
-        )
-
-    except errors.ServerError as error:
-        raise RuntimeError(
-            "Gemini is temporarily unavailable."
-        ) from error
-
-    except errors.ClientError as error:
-        raise RuntimeError(
-            "Gemini rejected the request."
-        ) from error
-
-    except ValidationError as error:
-        raise RuntimeError(
-            (
-                "Gemini returned an invalid "
-                "itinerary structure."
-            )
-        ) from error
+    # Kakao verifies every generated place
+    # and fills coordinates only when confident.
+    return attach_verified_coordinates(
+        generated_stops,
+        region,
+    )

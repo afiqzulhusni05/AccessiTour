@@ -23,3 +23,7 @@ print("===== Real AI service result =====")
 
 for stop in stops:
     print(stop.model_dump())
+    
+    
+    
+    

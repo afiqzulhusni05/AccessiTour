@@ -64,13 +64,33 @@ MIN_NAME_SCORE = 0.8
 AMBIGUOUS_SCORE_GAP = 0.05
 AMBIGUOUS_DISTANCE_KM = 1.0
 
+# Branch-name matching (e.g. "테라로사 F1963" -> "테라로사 수영점").
+# The branch is accepted only if it is this close to the landmark
+# named in Gemini's name (F1963).
+BRANCH_LANDMARK_MAX_KM = 0.3
+
+# Score given when brand AND location are both confirmed.
+# Slightly above the 0.85 "contained name" score, so the shop is
+# preferred over the landmark building itself when both pass.
+BRANCH_MATCH_SCORE = 0.9
+
+# The brand part must be at least this long, so very short brand
+# names cannot match by accident.
+MIN_BRAND_LENGTH = 3
+
 
 def search_place_candidates(
     query: str,
     region: str,
+    near: Optional[dict] = None,
+    radius_m: int = 300,
 ) -> list[dict]:
     """
     Search Kakao for several possible places.
+
+    Normally searches the whole region.
+    If `near` (a Kakao place) is given, searches only within
+    radius_m metres of that place instead.
 
     Returns raw Kakao results.
     Raises RuntimeError only if the Kakao request itself fails.
@@ -90,10 +110,16 @@ def search_place_candidates(
         "sort": "accuracy",
     }
 
-    rect = REGION_RECTS.get(region)
+    if near is not None:
+        # x = longitude, y = latitude, radius in metres
+        params["x"] = near["x"]
+        params["y"] = near["y"]
+        params["radius"] = radius_m
+    else:
+        rect = REGION_RECTS.get(region)
 
-    if rect:
-        params["rect"] = rect
+        if rect:
+            params["rect"] = rect
 
     try:
         response = requests.get(
@@ -105,12 +131,13 @@ def search_place_candidates(
 
         response.raise_for_status()
 
-    except requests.RequestException as error:
+        data = response.json()
+
+    # ValueError: Kakao answered with something that isn't JSON
+    except (requests.RequestException, ValueError) as error:
         raise RuntimeError(
             f"Kakao place search failed: {error}"
         ) from error
-
-    data = response.json()
 
     return data.get("documents", [])
 
@@ -355,6 +382,254 @@ def verify_place_candidate(
     return score
 
 
+def split_branch(name: str) -> tuple[str, str]:
+    """
+    Split a Kakao chain name into brand and branch.
+
+    "테라로사 수영점" -> ("테라로사", "수영")
+    "부산박물관"      -> ("부산박물관", "")
+
+    Only the LAST word, separated by a space and ending in 점,
+    counts as a branch. That is how Kakao writes chain branches.
+    """
+
+    words = name.strip().split()
+
+    if (
+        len(words) >= 2
+        and words[-1].endswith("점")
+        and len(words[-1]) >= 2
+    ):
+        brand = normalize_name(" ".join(words[:-1]))
+        branch = normalize_name(words[-1][:-1])
+        return brand, branch
+
+    return normalize_name(name), ""
+
+
+def find_landmark(
+    landmark_name: str,
+    region: str,
+) -> Optional[dict]:
+    """
+    Find the landmark itself on Kakao, e.g. "f1963".
+
+    Only an EXACT name match inside the region counts.
+    If several exact matches are far apart, we cannot tell
+    which one is meant, so return None.
+    """
+
+    try:
+        candidates = search_place_candidates(
+            landmark_name,
+            region,
+        )
+
+    except RuntimeError as error:
+        logger.warning(
+            "Kakao landmark search failed for %r: %s",
+            landmark_name,
+            error,
+        )
+        return None
+
+    exact = [
+        candidate
+        for candidate in candidates
+        if normalize_name(candidate.get("place_name", "")) == landmark_name
+        and is_in_region(candidate, region)
+    ]
+
+    if not exact:
+        return None
+
+    for other in exact[1:]:
+        if distance_km(exact[0], other) > AMBIGUOUS_DISTANCE_KM:
+            return None
+
+    return exact[0]
+
+
+def search_near_landmark(
+    query: str,
+    region: str,
+    landmark_cache: dict,
+) -> list[dict]:
+    """
+    Used when Kakao finds nothing for the full name, e.g.
+    "테라로사 F1963" returns no results.
+
+    Tries each word as a landmark ("F1963"). If one is found
+    on Kakao, searches the other words ("테라로사") only around it.
+
+    Returns the nearby Kakao results (may be empty).
+    """
+
+    words = query.split()
+
+    # Only short multi-word names like "brand + landmark".
+    if not 2 <= len(words) <= 4:
+        return []
+
+    for index, word in enumerate(words):
+        location = normalize_name(word)
+
+        if len(location) < 2:
+            continue
+
+        if location not in landmark_cache:
+            landmark_cache[location] = find_landmark(location, region)
+
+        landmark = landmark_cache[location]
+
+        if landmark is None:
+            continue
+
+        rest = " ".join(words[:index] + words[index + 1:])
+
+        try:
+            return search_place_candidates(
+                rest,
+                region,
+                near=landmark,
+                radius_m=int(BRANCH_LANDMARK_MAX_KM * 1000),
+            )
+
+        except RuntimeError as error:
+            logger.warning(
+                "Kakao nearby search failed for %r: %s",
+                rest,
+                error,
+            )
+            return []
+
+    return []
+
+
+def search_brand_without_branch(
+    query: str,
+    region: str,
+) -> list[dict]:
+    """
+    Used when Kakao finds nothing for a name with a branch suffix
+    that Kakao does not use, e.g. "카파도키아 부산대점".
+
+    Searches only the brand ("카파도키아") and keeps ONLY results
+    whose own brand is exactly the same. Different shops are dropped.
+
+    If Kakao has more than one same-brand place far apart, we cannot
+    tell which branch was meant, so nothing is returned.
+    """
+
+    brand, branch = split_branch(query)
+
+    # Only names like "brand + something점".
+    if not branch or len(brand) < MIN_BRAND_LENGTH:
+        return []
+
+    brand_text = " ".join(query.split()[:-1])
+
+    try:
+        results = search_place_candidates(brand_text, region)
+
+    except RuntimeError as error:
+        logger.warning(
+            "Kakao brand search failed for %r: %s",
+            brand_text,
+            error,
+        )
+        return []
+
+    same_brand = [
+        candidate
+        for candidate in results
+        if split_branch(candidate.get("place_name", ""))[0] == brand
+    ]
+
+    for other in same_brand[1:]:
+        if distance_km(same_brand[0], other) > AMBIGUOUS_DISTANCE_KM:
+            logger.info(
+                "Several %r places found, branch unclear for %r",
+                brand_text,
+                query,
+            )
+            return []
+
+    return same_brand
+
+
+def verify_branch_candidate(
+    query: str,
+    candidate: dict,
+    region: str,
+    place_category: Optional[str],
+    landmark_cache: dict,
+) -> Optional[float]:
+    """
+    Second chance for a candidate that failed the normal name check
+    only because the branch is written differently.
+
+    Accepts "테라로사 수영점" for the query "테라로사 F1963" only when:
+      1. the brand matches exactly ("테라로사" == "테라로사"),
+      2. the query has an extra location word ("f1963"),
+      3. that location exists on Kakao as a landmark, and
+      4. this branch is within BRANCH_LANDMARK_MAX_KM of it.
+
+    Returns BRANCH_MATCH_SCORE if accepted, otherwise None.
+    """
+
+    candidate_name = candidate.get("place_name", "")
+
+    # Same safety checks as the normal path.
+    if not is_in_region(candidate, region):
+        return None
+
+    if is_facility_of_place(query, candidate_name):
+        return None
+
+    if not category_is_ok(candidate, place_category):
+        return None
+
+    brand, branch = split_branch(candidate_name)
+
+    # Only chain branches ("brand + branch점") use this path.
+    if not branch or len(brand) < MIN_BRAND_LENGTH:
+        return None
+
+    query_normalized = normalize_name(query)
+
+    # The query must START with the exact brand.
+    if not query_normalized.startswith(brand):
+        return None
+
+    # What is left is the location word, e.g. "f1963".
+    location = query_normalized[len(brand):]
+
+    if len(location) < 2:
+        return None
+
+    # Search each landmark only once per stop.
+    if location not in landmark_cache:
+        landmark_cache[location] = find_landmark(location, region)
+
+    landmark = landmark_cache[location]
+
+    if landmark is None:
+        return None
+
+    if distance_km(candidate, landmark) > BRANCH_LANDMARK_MAX_KM:
+        return None
+
+    logger.info(
+        "Branch match: %r -> %r (near landmark %r)",
+        query,
+        candidate_name,
+        landmark.get("place_name"),
+    )
+
+    return BRANCH_MATCH_SCORE
+
+
 def find_verified_place(
     names: list[Optional[str]],
     region: str,
@@ -366,10 +641,10 @@ def find_verified_place(
     Korean name should normally be provided first,
     followed by the display/English name.
 
-    Returns None when no confident match exists.
+    Search all provided names first, then compare all
+    verified candidates together.
 
-    Kakao failure for one stop will not break
-    the whole itinerary.
+    Returns None when no confident match exists.
     """
 
     region = region.upper()
@@ -394,6 +669,13 @@ def find_verified_place(
         ):
             queries.append(cleaned_name)
 
+    # Store all verified candidates from ALL queries.
+    # Kakao place ID is used to avoid duplicates.
+    scored_by_id = {}
+
+    # Landmark searches done for branch matching, reused per stop.
+    landmark_cache = {}
+
     for query in queries:
         try:
             candidates = search_place_candidates(
@@ -409,7 +691,23 @@ def find_verified_place(
             )
             continue
 
-        scored_candidates = []
+        # Kakao found nothing for the full name (e.g. "테라로사 F1963"):
+        # look for the rest of the name around a landmark in it.
+        if not candidates:
+            candidates = search_near_landmark(
+                query,
+                region,
+                landmark_cache,
+            )
+
+            # Also try the brand alone when the name ends in a branch
+            # Kakao does not use (e.g. "카파도키아 부산대점").
+            candidates = candidates + search_brand_without_branch(
+                query,
+                region,
+            )
+
+        found_for_query = False
 
         for candidate in candidates:
             score = verify_place_candidate(
@@ -419,93 +717,104 @@ def find_verified_place(
                 place_category=place_category,
             )
 
-            if score is not None:
-                scored_candidates.append(
-                    (
-                        score,
-                        candidate,
-                    )
+            # Normal check failed: try the branch-name check.
+            if score is None:
+                score = verify_branch_candidate(
+                    query=query,
+                    candidate=candidate,
+                    region=region,
+                    place_category=place_category,
+                    landmark_cache=landmark_cache,
                 )
 
-        if not scored_candidates:
+            if score is None:
+                continue
+
+            found_for_query = True
+
+            candidate_id = candidate.get("id")
+
+            if not candidate_id:
+                continue
+
+            previous = scored_by_id.get(candidate_id)
+
+            # If the same Kakao place appears in both searches,
+            # keep its best score.
+            if previous is None or score > previous[0]:
+                scored_by_id[candidate_id] = (
+                    score,
+                    candidate,
+                    query,
+                )
+
+        if not found_for_query:
             logger.info(
                 "No verified Kakao match for %r",
                 query,
             )
-            continue
 
-        # Highest similarity first.
-        scored_candidates.sort(
-            key=lambda item: item[0],
-            reverse=True,
-        )
+    # Nothing from either Korean or English search passed.
+    if not scored_by_id:
+        return None
 
-        best_score, best_candidate = (
-            scored_candidates[0]
-        )
+    # Compare every candidate from both searches together.
+    scored_candidates = list(scored_by_id.values())
 
-        # If two different places are almost equally likely
-        # but far apart, do not guess.
-        if len(scored_candidates) > 1:
-            (
-                second_score,
+    scored_candidates.sort(
+        key=lambda item: item[0],
+        reverse=True,
+    )
+
+    best_score, best_candidate, best_query = (
+        scored_candidates[0]
+    )
+
+    # If two different places are almost equally likely
+    # but far apart, do not guess.
+    if len(scored_candidates) > 1:
+        (
+            second_score,
+            second_candidate,
+            _,
+        ) = scored_candidates[1]
+
+        if (
+            best_score - second_score
+            <= AMBIGUOUS_SCORE_GAP
+            and distance_km(
+                best_candidate,
                 second_candidate,
-            ) = scored_candidates[1]
+            )
+            > AMBIGUOUS_DISTANCE_KM
+        ):
+            logger.info(
+                (
+                    "Ambiguous Kakao match: "
+                    "%r vs %r"
+                ),
+                best_candidate["place_name"],
+                second_candidate["place_name"],
+            )
 
-            if (
-                best_score - second_score
-                <= AMBIGUOUS_SCORE_GAP
-                and distance_km(
-                    best_candidate,
-                    second_candidate,
-                )
-                > AMBIGUOUS_DISTANCE_KM
-            ):
-                logger.info(
-                    (
-                        "Ambiguous Kakao match for %r: "
-                        "%r vs %r"
-                    ),
-                    query,
-                    best_candidate["place_name"],
-                    second_candidate["place_name"],
-                )
+            return None
 
-                return None
+    logger.info(
+        "Verified %r -> %r (score %.2f)",
+        best_query,
+        best_candidate["place_name"],
+        best_score,
+    )
 
-        logger.info(
-            "Verified %r -> %r (score %.2f)",
-            query,
-            best_candidate["place_name"],
-            best_score,
-        )
-
-        return {
-            "kakao_place_id": best_candidate["id"],
-            "kakao_place_name": (
-                best_candidate["place_name"]
-            ),
-            "address": (
-                best_candidate.get(
-                    "road_address_name"
-                )
-                or best_candidate.get(
-                    "address_name"
-                )
-            ),
-            "latitude": float(
-                best_candidate["y"]
-            ),
-            "longitude": float(
-                best_candidate["x"]
-            ),
-            "place_url": best_candidate.get(
-                "place_url"
-            ),
-            "match_score": round(
-                best_score,
-                2,
-            ),
-        }
-
-    return None
+    return {
+        "kakao_place_id": best_candidate["id"],
+        "kakao_place_name": best_candidate["place_name"],
+        "address": (
+            best_candidate.get("road_address_name")
+            or best_candidate.get("address_name")
+        ),
+        "latitude": float(best_candidate["y"]),
+        "longitude": float(best_candidate["x"]),
+        "place_url": best_candidate.get("place_url"),
+        "match_score": round(best_score, 2),
+    }

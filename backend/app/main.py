@@ -11,7 +11,6 @@ from app.routers import (
     emergency,
     guides,
     itineraries,
-    itinerary,
     matching,
     places,
     tourists,
@@ -39,9 +38,6 @@ app.include_router(bookings.router)
 app.include_router(itineraries.router)
 app.include_router(places.router)
 app.include_router(emergency.router)
-
-# AI itinerary generation endpoint
-app.include_router(itinerary.router)
 
 
 @app.get("/", include_in_schema=False)
