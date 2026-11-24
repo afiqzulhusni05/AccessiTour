@@ -186,9 +186,21 @@ export interface ItinerarySummary {
 }
 
 /** A tourist's saved defaults, used to pre-fill the trip profile. */
+/** Whether the tourist would rather have a guide of one gender. The matcher scores it; it isn't a hard filter. */
+export type GenderPreference = "any" | "female" | "male";
+
+/** What a helper or hospital needs in an emergency. Only the tourist sees it; guides never get it. */
+export interface EmergencyCard {
+  blood_type: string;
+  contact_name: string;
+  contact_phone: string;
+  medical_notes: string;
+}
+
 export interface TripPreferences {
   languages: string[];
   mobility: Mobility;
+  gender_preference?: GenderPreference;
   interests: string[];
   dietary: string[];
   budget_per_day: number;
@@ -209,7 +221,11 @@ export interface Booking {
   created_at: string;
   itinerary_id: number | null; // set once the guide accepts
   /** Set for a booking made in the team API: the trip segment it is for, and the guide's quoted fee. */
-  team?: { trip_id: number; segment_id: number; total_price: number };
+  team?: {
+    trip_id: number; segment_id: number; total_price: number;
+    status: string; // the team API's own status (REQUESTED … CONFIRMED, COMPLETED), finer than `status`
+    hours: string | null; // "10:00–14:00" for a short session
+  };
 }
 
 /** One guide search, for the admin's matching activity view. */

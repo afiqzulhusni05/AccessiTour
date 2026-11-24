@@ -1,4 +1,5 @@
 /** Multi-city trips: the outline of cities and dates. Pure functions, tested in multiCity.test.ts. */
+import type { TeamSegmentIn } from "./teamApi";
 import type { Transfer, TripLeg } from "./types";
 
 export const MAX_LEGS = 5; // same limit as the backend
@@ -49,3 +50,34 @@ export const TRANSFER_INFO: Partial<Record<Transfer, { name: string; url: string
   bus: { name: "Kobus", url: "https://www.kobus.co.kr" },
   flight: { name: "Korea Airports Corporation", url: "https://www.airport.co.kr" },
 };
+
+
+/** How long the tourist wants a guide: whole days, or a few hours each day. */
+export type GuideService = { kind: "FULL_DAY" } | { kind: "MICRO"; start: string; end: string };
+
+/** Every date from `from` to `to`, inclusive (YYYY-MM-DD). */
+export function datesBetween(from: string, to: string): string[] {
+  const out: string[] = [];
+  for (let d = new Date(`${from}T00:00`); d <= new Date(`${to}T00:00`); d.setDate(d.getDate() + 1)) out.push(d.toLocaleDateString("sv"));
+  return out;
+}
+
+/**
+ * The team API's trip segments for the stays. Full days: one segment per city, budgeted for the whole stay.
+ * A few hours: the team API books short sessions one day at a time, so each day of each stay is its own segment.
+ */
+export function buildSegments(
+  stays: TripLeg[], service: GuideService, groupSize: number, attributes: string[], budgetPerDay: number,
+): TeamSegmentIn[] {
+  const base = { group_size: groupSize, attributes };
+  if (service.kind === "FULL_DAY") {
+    return stays.map((s) => ({
+      ...base, region: s.region.toUpperCase(), service_type: "FULL_DAY", start_date: s.start_date, end_date: s.end_date,
+      budget: budgetPerDay * stayDays(s),
+    }));
+  }
+  return stays.flatMap((s) => datesBetween(s.start_date, s.end_date).map((day) => ({
+    ...base, region: s.region.toUpperCase(), service_type: "MICRO" as const, start_date: day, end_date: day,
+    start_time: service.start, end_time: service.end, budget: budgetPerDay,
+  })));
+}

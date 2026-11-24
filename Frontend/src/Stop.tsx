@@ -1,5 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
+import NearestToilet from "./NearestToilet";
 import { StopNav, type NavPrefs } from "./StopNav";
 import TimeWheel from "./TimeWheel";
 import { MODES } from "./mapLinks";
@@ -95,12 +96,13 @@ export function StopForm({ initial, days, submitLabel, busy, onSubmit, onCancel 
 
 const PROGRESS_MARK: Record<Progress, string> = { upcoming: "○", on_the_way: "→", visited: "✓", skipped: "×" };
 
-export function Stop({ item, prev, next, nav, near, days, editable, isGuide, canComment, busy, onSave, onDelete, onCheck, onComment, onProgress }: {
+export function Stop({ item, prev, next, nav, near, accessNeeds, days, editable, isGuide, canComment, busy, onSave, onDelete, onCheck, onComment, onProgress }: {
   item: ItineraryItem;
   prev?: ItineraryItem; // the stop before this one on the same day, for "directions from the previous stop"
   next?: ItineraryItem; // the stop after this one on the same day, to notice an overlap
   nav: NavPrefs;
   near: string; // the trip's city, to narrow a search by name
+  accessNeeds: boolean; // the traveller has a mobility need: offer the nearest accessible toilet
   days: number;
   editable: boolean;
   isGuide: boolean;
@@ -176,6 +178,9 @@ export function Stop({ item, prev, next, nav, near, days, editable, isGuide, can
             prefs={item.transport ? { ...nav, mode: item.transport } : nav}
             prev={prev && { name: prev.place_name, lat: prev.lat, lng: prev.lng }}
           />
+        )}
+        {editing === null && accessNeeds && item.lat !== null && item.lng !== null && (
+          <NearestToilet lat={item.lat} lng={item.lng} place={item.place_name} />
         )}
 
         {editing !== null ? (

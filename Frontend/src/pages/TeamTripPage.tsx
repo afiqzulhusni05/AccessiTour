@@ -17,7 +17,7 @@ const OPEN: Booking["status"][] = ["pending", "accepted", "completed"]; // a seg
  * booked, then the booking, and once the guide accepts, the itinerary (kept in the local backend).
  */
 export default function TeamTripPage() {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
   const { id } = useParams();
   const [trip, setTrip] = useState<team.TeamTrip | null>(null);
   const [matches, setMatches] = useState<Record<number, team.TeamSegmentMatches>>({}); // by segment id
@@ -81,7 +81,10 @@ export default function TeamTripPage() {
     document.getElementById(`segtab-${to}`)?.focus();
   };
 
-  /** Which days of the stay a guide hasn't marked as free for a full day (6+ hours), looked up when asked. */
+  /**
+   * Which days of the stay a guide hasn't marked as free, looked up when asked: for full days, 6+ free hours
+   * that day; for a short session, one free stretch covering its hours.
+   */
   const showMissing = async (s: team.TeamSegment, m: team.TeamMatch) => {
     const slots = await team.guideAvailability(teamToken()!, m.guide.id, s.start_date, s.end_date).catch(() => null);
     if (!slots) return;
@@ -89,11 +92,15 @@ export default function TeamTripPage() {
     const days: string[] = [];
     for (let d = new Date(`${s.start_date}T00:00`); d <= new Date(`${s.end_date}T00:00`); d.setDate(d.getDate() + 1)) {
       const day = d.toLocaleDateString("sv");
-      if (!slots.some((x) => x.date === day && hours(x) >= 6)) days.push(day);
+      const fits = (x: team.TeamSlot) => (s.service_type === "MICRO" && s.start_time && s.end_time
+        ? x.start_time.slice(0, 5) <= s.start_time.slice(0, 5) && x.end_time.slice(0, 5) >= s.end_time.slice(0, 5)
+        : hours(x) >= 6);
+      if (!slots.some((x) => x.date === day && fits(x))) days.push(day);
     }
     setMissing((prev) => ({ ...prev, [`${s.id}:${m.guide.id}`]: days }));
   };
 
+  const shortDate = (d: string) => new Date(`${d}T00:00`).toLocaleDateString(i18n.language, { month: "short", day: "numeric" });
   const seg = trip.segments[tab];
   const booking = bookingFor(seg);
   const itinerary = booking ? itineraries[booking.id] : undefined;
@@ -103,7 +110,8 @@ export default function TeamTripPage() {
   return (
     <div className="page wide">
       {back}
-      <h1>{trip.segments.map(city).join(" → ")}</h1>
+      {/* short sessions are one segment per day, so a city can repeat: name each city once, in order */}
+      <h1>{trip.segments.map(city).filter((c, i, all) => c !== all[i - 1]).join(" → ")}</h1>
       <p className="muted">{trip.start_date} – {trip.end_date}</p>
       {allItems.length > 0 && <TripProgress items={allItems} title={multi ? t("multi.overall") : undefined} />}
 
@@ -115,7 +123,7 @@ export default function TeamTripPage() {
             return (
               <button key={s.id} type="button" role="tab" id={`segtab-${i}`} aria-selected={i === tab} aria-controls="segpanel"
                 tabIndex={i === tab ? 0 : -1} onClick={() => { setTab(i); setMsg(""); }}>
-                {city(s)}
+                {city(s)}{s.service_type === "MICRO" && <small> {shortDate(s.start_date)}</small>}
                 <small>{its ? ` · ${summarize(its.items).percent}%` : b ? ` · ${t(`booking.status.${b.status}`)}` : ""}</small>
               </button>
             );
@@ -125,7 +133,9 @@ export default function TeamTripPage() {
 
       <div role={multi ? "tabpanel" : undefined} id="segpanel" aria-labelledby={multi ? `segtab-${tab}` : undefined} className="citypanel">
         <p className="muted">
-          {city(seg)} · {seg.start_date} – {seg.end_date} · {t("guide.days", { count: stayDays(seg) })}
+          {city(seg)} · {seg.service_type === "MICRO" && seg.start_time && seg.end_time
+            ? `${seg.start_date} · ${seg.start_time.slice(0, 5)}–${seg.end_time.slice(0, 5)}`
+            : `${seg.start_date} – ${seg.end_date} · ${t("guide.days", { count: stayDays(seg) })}`}
           {seg.budget ? ` · ${t("teamtrip.budget", { amount: seg.budget.toLocaleString() })}` : ""}
         </p>
 
@@ -153,7 +163,7 @@ export default function TeamTripPage() {
                           {m.guide.languages.map((l) => t(`lang.${l}`)).join(", ")} · {m.guide.rating_count
                             ? `★ ${m.guide.rating_average.toFixed(1)} (${m.guide.rating_count} ${t("results.reviews")})` : t("results.newGuide")}
                         </p>
-                        <p className="price">₩{m.estimated_price.toLocaleString()} <small>{t("teamtrip.forStay")}</small></p>
+                        <p className="price">₩{m.estimated_price.toLocaleString()} <small>{t(seg.service_type === "MICRO" ? "teamtrip.forSession" : "teamtrip.forStay")}</small></p>
                         <ul className="reasons">
                           {m.breakdown.map((f) => (
                             <li key={f.factor} className={f.score >= 0.99 ? "good" : "weak"}>

@@ -1,6 +1,6 @@
 // The team's API (FastAPI + PostgreSQL): its raw calls and shapes. api.ts adapts them for the screens.
 import { ApiError } from "./api";
-import type { GuideProfileIn, Mobility, TripPreferences } from "./types";
+import type { EmergencyCard, GenderPreference, GuideProfileIn, Mobility, TripPreferences } from "./types";
 
 const TEAM = (import.meta.env.VITE_TEAM_API_URL ?? "https://accessitour-api.onrender.com/api/v1").replace(/\/$/, "");
 
@@ -31,6 +31,8 @@ export const login = (email: string, password: string) =>
 
 const MOBILITY_OUT: Record<Mobility, string> = { normal: "NORMAL", slow: "SLOW_WALK", wheelchair: "WHEELCHAIR" };
 const MOBILITY_IN: Record<string, Mobility> = { NORMAL: "normal", SLOW_WALK: "slow", WHEELCHAIR: "wheelchair" };
+const GENDER_OUT: Record<GenderPreference, string> = { any: "NO_PREFERENCE", female: "FEMALE", male: "MALE" };
+const GENDER_IN: Record<string, GenderPreference> = { NO_PREFERENCE: "any", FEMALE: "female", MALE: "male" };
 
 interface TeamTourist {
   preferred_language: string;
@@ -41,13 +43,14 @@ interface TeamTourist {
 }
 
 /** The parts of the saved preferences that live in the team API. null when the tourist has no profile there yet. */
-export async function getTouristPrefs(token: string): Promise<Pick<TripPreferences, "languages" | "mobility" | "dietary"> | null> {
+export async function getTouristPrefs(token: string): Promise<Pick<TripPreferences, "languages" | "mobility" | "dietary" | "gender_preference"> | null> {
   try {
     const p = await call<TeamTourist>("GET", "/tourists/me", token);
     return {
       languages: p.languages?.length ? p.languages : [p.preferred_language],
       mobility: MOBILITY_IN[p.mobility_level] ?? "normal",
       dietary: (p.dietary ?? []).map((d) => d.toLowerCase()),
+      gender_preference: GENDER_IN[String(p.gender_preference)] ?? "any",
     };
   } catch (e) {
     if (e instanceof ApiError && e.status === 404) return null;
@@ -70,7 +73,47 @@ export async function saveTouristPrefs(token: string, prefs: TripPreferences): P
     languages: prefs.languages,
     mobility_level: MOBILITY_OUT[prefs.mobility],
     dietary: prefs.dietary.map((d) => d.toUpperCase()),
+    ...(prefs.gender_preference ? { gender_preference: GENDER_OUT[prefs.gender_preference] } : {}),
   });
+}
+
+// ---------- emergency card (part of the tourist profile; the team API never shows it to guides)
+
+interface TeamEmergencyInfo { blood_type: string | null; emergency_contact_name: string | null; emergency_contact_phone: string | null; medical_notes: string | null }
+const EMPTY_CARD: EmergencyCard = { blood_type: "", contact_name: "", contact_phone: "", medical_notes: "" };
+
+/** The tourist's emergency card; empty when they haven't filled it in (or have no profile yet). */
+export async function getEmergencyCard(token: string): Promise<EmergencyCard> {
+  try {
+    const e = (await call<TeamTourist & { emergency?: TeamEmergencyInfo }>("GET", "/tourists/me", token)).emergency;
+    return {
+      blood_type: e?.blood_type ?? "", contact_name: e?.emergency_contact_name ?? "",
+      contact_phone: e?.emergency_contact_phone ?? "", medical_notes: e?.medical_notes ?? "",
+    };
+  } catch (err) {
+    if (err instanceof ApiError && err.status === 404) return EMPTY_CARD;
+    throw err;
+  }
+}
+
+/** Saves the card, keeping the rest of the profile. The profile needs a language, so a new one starts with English. */
+export async function saveEmergencyCard(token: string, card: EmergencyCard): Promise<EmergencyCard> {
+  let current: Record<string, unknown> = { preferred_language: "en", languages: ["en"] };
+  try {
+    current = await call<TeamTourist>("GET", "/tourists/me", token);
+  } catch (e) {
+    if (!(e instanceof ApiError && e.status === 404)) throw e;
+  }
+  const { id: _id, user_id: _user, ...keep } = current;
+  const blank = (x: string) => x.trim() || null;
+  await call("PUT", "/tourists/me", token, {
+    ...keep,
+    emergency: {
+      blood_type: blank(card.blood_type), emergency_contact_name: blank(card.contact_name),
+      emergency_contact_phone: blank(card.contact_phone), medical_notes: blank(card.medical_notes),
+    },
+  });
+  return card;
 }
 
 // ---------- guide profile
@@ -142,6 +185,7 @@ export async function saveGuideProfile(token: string, p: GuideProfileIn): Promis
 
 export const TEAM_REGIONS = ["seoul", "busan", "jeju"]; // the only regions the team API accepts
 export const MAX_SEGMENT_DAYS = 14; // the team API's limit for one segment
+export const MAX_SEGMENTS = 10; // ...and for segments in one trip
 
 export interface TeamSegmentIn {
   region: string; // SEOUL | BUSAN | JEJU
@@ -151,6 +195,8 @@ export interface TeamSegmentIn {
   group_size: number;
   attributes: string[];
   budget: number | null; // the guide's whole fee for the segment, in won
+  start_time?: string | null; // MICRO only: HH:MM
+  end_time?: string | null;
 }
 export interface TeamSegment extends TeamSegmentIn {
   id: number;
@@ -193,6 +239,8 @@ export interface TeamBooking {
   service_type: string;
   start_date: string;
   end_date: string;
+  start_time: string | null; // short sessions only
+  end_time: string | null;
   group_size: number;
   total_price: number;
   guide: TeamGuideSummary;

@@ -6,7 +6,7 @@
 import * as osm from "./osm";
 import * as team from "./teamApi";
 import type {
-  AccountRole, Booking, BookingStatus, Bounds, Comment, Cuisine, GuideProfileIn, Itinerary, ItineraryItem, ItinerarySummary,
+  AccountRole, Booking, EmergencyCard, BookingStatus, Bounds, Comment, Cuisine, GuideProfileIn, Itinerary, ItineraryItem, ItinerarySummary,
   Meal, MealDiet, Progress, Role, SignupRequest, StopFields, Transport, TripPreferences, User,
 } from "./types";
 
@@ -77,11 +77,14 @@ export async function signup(req: SignupRequest): Promise<Session> {
 
 /** Languages, mobility and food needs. Interests, budget and the number of travellers belong to each trip. */
 export const getPreferences = (): Promise<TripPreferences> => authed(async (tok) => ({
-  languages: ["en"], mobility: "normal", dietary: [], interests: [], budget_per_day: 120000, party_size: 1,
+  languages: ["en"], mobility: "normal", dietary: [], interests: [], budget_per_day: 120000, party_size: 1, gender_preference: "any",
   ...(await team.getTouristPrefs(tok)),
 }));
 export const savePreferences = (prefs: TripPreferences) =>
   authed(async (tok) => { await team.saveTouristPrefs(tok, prefs); return prefs; });
+
+export const getEmergencyCard = () => authed((tok) => team.getEmergencyCard(tok));
+export const saveEmergencyCard = (card: EmergencyCard) => authed((tok) => team.saveEmergencyCard(tok, card));
 
 export const getGuideProfile = () => authed((tok) => team.getGuideProfile(tok));
 export const saveGuideProfile = (profile: GuideProfileIn) => authed((tok) => team.saveGuideProfile(tok, profile));
@@ -109,12 +112,16 @@ async function toBooking(tok: string, b: team.TeamBooking): Promise<Booking> {
       mobility: team.MOBILITY_FROM_TEAM[b.tourist.mobility_level] ?? "normal", interests: [], dietary: [], religious: [], notes: "",
     },
     score: null, created_at: b.created_at, itinerary_id: itineraryId,
-    team: { trip_id: b.trip_id, segment_id: b.segment_id, total_price: b.total_price },
+    team: {
+      trip_id: b.trip_id, segment_id: b.segment_id, total_price: b.total_price, status: b.status,
+      hours: b.start_time && b.end_time ? `${b.start_time.slice(0, 5)}–${b.end_time.slice(0, 5)}` : null,
+    },
   };
 }
 
 export const listBookings = () => authed(async (tok) => Promise.all((await team.myBookings(tok)).map((b) => toBooking(tok, b))));
-export const decideBooking = (id: number, action: "accept" | "decline" | "cancel") =>
+/** "complete" is the guide marking a confirmed trip as done, on or after its last day. */
+export const decideBooking = (id: number, action: "accept" | "decline" | "cancel" | "complete") =>
   authed(async (tok) => toBooking(tok, await team.bookingAction(tok, id, action)));
 /** Asks a guide to take one segment (city) of a trip. */
 export const requestTeamBooking = (segmentId: number, guideId: number) =>
