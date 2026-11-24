@@ -539,3 +539,14 @@ ol.plain { margin: 0; padding-left: 1.2rem; font-weight: 600; }
 .pin.restaurants, .dot.restaurants { background: #e07a2f; color: #fff; }
 .pin.hospitals, .dot.hospitals { background: var(--danger); color: #fff; }
 .pin.restrooms, .pin.restaurants, .pin.hospitals { border-color: #fff; font-size: .7rem; }
+
+/* Emergency card, short sessions, accessible toilet, booking notes */
+.emergency-card { margin-top: 2rem; padding: 1rem 1.25rem; background: #fff; border: 2px solid var(--mist); border-left: 6px solid var(--danger); border-radius: 8px; }
+.emergency-card h2 { margin-top: 0; }
+.emergency-facts dd a { font-weight: 700; }
+.prewrap { white-space: pre-wrap; }
+.sos-card { margin: 1rem 0; padding: .75rem 1rem; border: 2px solid var(--danger); border-radius: 8px; background: #fff; }
+.sos-card h3 { margin: 0 0 .3rem; }
+.hours-row { margin-top: .6rem; max-width: 24rem; }
+.nearest-toilet { margin: .4rem 0 0; font-size: .9rem; }
+.small-note { font-size: .85rem; margin: .3rem 0 0; flex-basis: 100%; }

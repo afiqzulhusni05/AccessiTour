@@ -6,6 +6,7 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import get_current_user, require_guide, require_tourist
+from app.deletion_rules import booking_delete_problem
 from app.enums import BookingStatus
 from app.matching import bookings_overlap, estimate_price, exclusion_reason, free_days
 from app.models import Booking, Guide, Tourist, Trip, TripSegment, User
@@ -271,3 +272,17 @@ def complete_booking(
             status_code=409, detail="A booking can be completed on or after its last day"
         )
     return save(db, booking, BookingStatus.COMPLETED)
+
+
+@router.delete("/{booking_id}", status_code=204)
+def delete_booking(
+    booking_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)
+):
+    """The tourist or the guide removes a booking that never went ahead (cancelled or declined).
+    It disappears for both of them."""
+    booking = get_my_booking(db, user, booking_id)
+    problem = booking_delete_problem(booking.status)
+    if problem:
+        raise HTTPException(status_code=409, detail=problem)
+    db.delete(booking)
+    db.commit()

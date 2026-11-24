@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ApiError, decideBooking } from "./api";
+import { ApiError, decideBooking, deleteBooking } from "./api";
 import { useLocalized } from "./names";
 import type { AccountRole, Booking } from "./types";
 
@@ -19,8 +19,11 @@ export default function BookingList({ bookings, viewer, onChange }: {
   const [busy, setBusy] = useState<{ id: number; action: string } | null>(null);
   const [err, setErr] = useState("");
 
-  const act = async (b: Booking, action: "accept" | "decline" | "cancel") => {
-    const question = { accept: "", decline: t("booking.confirmDecline", { name: b.owner_name }), cancel: t("booking.confirmCancel") }[action];
+  const act = async (b: Booking, action: "accept" | "decline" | "cancel" | "complete") => {
+    const question = {
+      accept: "", decline: t("booking.confirmDecline", { name: b.owner_name }), cancel: t("booking.confirmCancel"),
+      complete: t("booking.confirmComplete", { name: b.owner_name }),
+    }[action];
     if (question && !window.confirm(question)) return;
     setBusy({ id: b.id, action });
     setErr("");
@@ -34,6 +37,22 @@ export default function BookingList({ bookings, viewer, onChange }: {
     }
   };
 
+  const remove = async (b: Booking) => {
+    if (!window.confirm(t("booking.confirmDelete"))) return;
+    setBusy({ id: b.id, action: "delete" });
+    setErr("");
+    try {
+      await deleteBooking(b.id);
+    } catch (e) {
+      setErr(e instanceof ApiError && e.detail ? e.detail : t("booking.failed"));
+    } finally {
+      setBusy(null);
+      onChange(null); // reload either way: the booking is gone, or its state changed
+    }
+  };
+  const today = new Date().toLocaleDateString("sv");
+  // The team API lets the guide close a trip only once both sides approved the itinerary and the last day has come.
+  const confirmed = (b: Booking) => b.team?.status === "CONFIRMED";
   const list = (xs: string[], ns: string) => xs.map((x) => t(`${ns}.${x}`)).join(", ") || "–";
 
   return (
@@ -53,7 +72,7 @@ export default function BookingList({ bookings, viewer, onChange }: {
                 <span className={"state " + b.status}>{t(`booking.status.${b.status}`)}</span>
               </div>
               <p className="muted">
-                {p.start_date} – {p.end_date}
+                {p.start_date === p.end_date ? p.start_date : `${p.start_date} – ${p.end_date}`}{b.team?.hours && ` · ${b.team.hours}`}
                 {b.score !== null && ` · ${t("booking.match", { pct: Math.round(b.score * 100) })}`}
                 {b.team && ` · ₩${b.team.total_price.toLocaleString()}`}
                 {viewer === "admin" && ` · ${guide}`}
@@ -80,8 +99,16 @@ export default function BookingList({ bookings, viewer, onChange }: {
                     <button type="button" className="ghost small danger" disabled={working} onClick={() => act(b, "decline")} aria-label={`${t("booking.decline")}: ${b.owner_name}`}>{t("booking.decline")}</button>
                   </>
                 )}
+                {viewer === "guide" && b.status === "accepted" && confirmed(b) && (p.end_date <= today ? (
+                  <button type="button" className="primary small" disabled={working} onClick={() => act(b, "complete")}>{t("booking.complete")}</button>
+                ) : <p className="muted small-note">{t("booking.completeLater", { date: p.end_date })}</p>)}
+                {viewer === "guide" && b.status === "accepted" && !confirmed(b) && p.end_date <= today && <p className="muted small-note">{t("booking.completeNeedsApproval")}</p>}
                 {b.team && b.status === "accepted" && (
                   <button type="button" className="ghost small danger" disabled={working} onClick={() => act(b, "cancel")}>{t("booking.cancelBooking")}</button>
+                )}
+                {b.team && (b.status === "cancelled" || b.status === "declined") && (
+                  <button type="button" className="ghost small danger" disabled={working} onClick={() => remove(b)}
+                    aria-label={`${t("booking.delete")}: ${t(`region.${p.region}`)} ${p.start_date}`}>{t("booking.delete")}</button>
                 )}
                 {b.status === "pending" && viewer !== "guide" && (
                   <button type="button" className="ghost small danger" disabled={working} onClick={() => act(b, "cancel")}>{t("booking.cancel")}</button>

@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { getPreferences, savePreferences } from "../api";
 import { useAuth } from "../AuthContext";
 import { Loading } from "../Dash";
+import EmergencyCardSection, { GenderPicker } from "../EmergencyCard";
 import MultiSelect from "../MultiSelect";
 import { DIETARY, LANGS, MOBILITY } from "../options";
 import type { TripPreferences } from "../types";
@@ -58,6 +59,7 @@ export default function PreferencesPage() {
             <dt>{t("needs.mobility")}</dt><dd>{(t(`mobility.${p.mobility}`) as unknown as string[])[0]}</dd>
             <dt>{t("trip.language")}</dt><dd>{list(p.languages, "lang")}</dd>
             <dt>{t("needs.dietary")}</dt><dd>{list(p.dietary, "diet")}</dd>
+            <dt>{t("card.genderPref")}</dt><dd>{t(`card.gender.${p.gender_preference ?? "any"}`)}</dd>
           </dl>
           <p role="status">{msg?.text}</p>
           <button type="button" className="primary" onClick={() => { setMsg(null); setDraft(saved); }}>{t("dash.editProfile")}</button>
@@ -86,6 +88,7 @@ export default function PreferencesPage() {
           label={t("needs.dietary")} options={DIETARY} value={p.dietary}
           onChange={(v) => set({ dietary: v })} optionLabel={(x) => t(`diet.${x}`)}
         />
+        <GenderPicker value={p.gender_preference ?? "any"} onChange={(g) => set({ gender_preference: g })} />
         <p role={msg && !msg.ok ? "alert" : "status"} className={msg && !msg.ok ? "error" : ""}>{msg?.text}</p>
         <div className="rowbtns">
           <button type="submit" className="primary" disabled={busy}>{t("prefs.save")}</button>
@@ -93,6 +96,8 @@ export default function PreferencesPage() {
         </div>
       </form>
       )}
+
+      <EmergencyCardSection />
     </div>
   );
 }

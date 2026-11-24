@@ -3,11 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ApiError, getPreferences, teamToken } from "../api";
 import * as team from "../teamApi";
-import { checkLegs, MAX_LEGS, moveLeg, stayDays } from "../multiCity";
+import { buildSegments, checkLegs, MAX_LEGS, moveLeg, stayDays, type GuideService } from "../multiCity";
+import { GenderPicker } from "../EmergencyCard";
 import MultiSelect from "../MultiSelect";
 import { CITIES, PROVINCES } from "../regions";
 import { DIETARY, GUIDE_INTERESTS, LANGS, MOBILITY } from "../options";
-import type { TouristProfile, TripLeg } from "../types";
+import type { GenderPreference, TouristProfile, TripLeg } from "../types";
 
 
 // Local calendar date, not UTC: toISOString() would give yesterday before 09:00 in Korea.
@@ -37,6 +38,8 @@ export default function ProfilePage() {
   const [cityText, setCityText] = useState("");
   const [adding, setAdding] = useState(false); // the city search box is open
   const [busy, setBusy] = useState(false);
+  const [service, setService] = useState<GuideService>({ kind: "FULL_DAY" });
+  const [gender, setGender] = useState<GenderPreference>("any");
   const multi = legs.length > 1;
   const [step, setStep] = useState(0);
   const [err, setErr] = useState("");
@@ -51,7 +54,11 @@ export default function ProfilePage() {
     let live = true;
     getPreferences()
       // the number of travellers belongs to each trip, not to the saved profile
-      .then(({ party_size: _, ...prefs }) => live && !touched.current && setP((prev) => ({ ...prev, ...prefs })))
+      .then(({ party_size: _, gender_preference, ...prefs }) => {
+        if (!live || touched.current) return;
+        setP((prev) => ({ ...prev, ...prefs }));
+        setGender(gender_preference ?? "any");
+      })
       .catch(() => {});
     return () => { live = false; };
   }, []);
@@ -90,6 +97,11 @@ export default function ProfilePage() {
       if (bad) return setErr(t(`multi.err.${bad[1]}`, { city: t(`region.${legs[bad[0]].region}`), prev: bad[0] ? t(`region.${legs[bad[0] - 1].region}`) : "" }));
       const long = stays().find((leg) => stayDays(leg) > team.MAX_SEGMENT_DAYS);
       if (long) return setErr(t("multi.err.tooLong", { city: t(`region.${long.region}`), max: team.MAX_SEGMENT_DAYS }));
+      if (service.kind === "MICRO") {
+        if (service.end <= service.start) return setErr(t("hours.err.times"));
+        const sessions = stays().reduce((n, s) => n + stayDays(s), 0);
+        if (sessions > team.MAX_SEGMENTS) return setErr(t("hours.err.tooMany", { max: team.MAX_SEGMENTS }));
+      }
       if (!(p.budget_per_day > 0)) return setErr(t("err.budget"));
       if (p.languages.length === 0) return setErr(t("err.language"));
     }
@@ -109,12 +121,9 @@ export default function ProfilePage() {
     setErr("");
     try {
       const { languages, mobility, interests, dietary, budget_per_day, party_size } = p;
-      await team.saveTouristPrefs(tok, { languages, mobility, interests, dietary, budget_per_day, party_size });
-      const trip = await team.createTrip(tok, stays().map((leg) => ({
-        region: leg.region.toUpperCase(), service_type: "FULL_DAY", start_date: leg.start_date, end_date: leg.end_date,
-        group_size: party_size, attributes: interests.filter((i) => GUIDE_INTERESTS.includes(i)).map((i) => i.toUpperCase()),
-        budget: budget_per_day * stayDays(leg), // the team API takes the guide's whole fee for the stay
-      })));
+      await team.saveTouristPrefs(tok, { languages, mobility, interests, dietary, budget_per_day, party_size, gender_preference: gender });
+      const attributes = interests.filter((i) => GUIDE_INTERESTS.includes(i)).map((i) => i.toUpperCase());
+      const trip = await team.createTrip(tok, buildSegments(stays(), service, party_size, attributes, budget_per_day));
       nav(`/t/${trip.id}`);
     } catch (e) {
       setErr(e instanceof ApiError && e.detail ? e.detail : t("multi.saveFailed"));
@@ -204,6 +213,35 @@ export default function ProfilePage() {
               </div>
             )}
           </div>
+
+          <fieldset>
+            <legend className="fieldlabel">{t("hours.label")}</legend>
+            <div className="chips" role="radiogroup" aria-label={t("hours.label")}>
+              <label className="chip">
+                <input type="radio" name="guide-service" checked={service.kind === "FULL_DAY"} onChange={() => setService({ kind: "FULL_DAY" })} />
+                <span>{t("hours.fullDay")}</span>
+              </label>
+              <label className="chip">
+                <input type="radio" name="guide-service" checked={service.kind === "MICRO"}
+                  onChange={() => setService({ kind: "MICRO", start: "10:00", end: "14:00" })} />
+                <span>{t("hours.fewHours")}</span>
+              </label>
+            </div>
+            {service.kind === "MICRO" && (
+              <>
+                <div className="row hours-row">
+                  <label>{t("hours.from")}
+                    <input type="time" step={1800} required value={service.start} onChange={(e) => setService({ ...service, start: e.target.value })} />
+                  </label>
+                  <label>{t("hours.until")}
+                    <input type="time" step={1800} required value={service.end} onChange={(e) => setService({ ...service, end: e.target.value })} />
+                  </label>
+                </div>
+                <small className="muted">{t("hours.hint")}</small>
+              </>
+            )}
+          </fieldset>
+
           <div className="row">
             <label>{t("trip.party")}
               <input type="number" min={1} value={p.party_size} onChange={(e) => set("party_size", Math.max(1, +e.target.value))} />
@@ -245,6 +283,7 @@ export default function ProfilePage() {
             label={t("needs.dietary")} options={DIETARY} value={p.dietary}
             onChange={(v) => set("dietary", v)} optionLabel={(d) => t(`diet.${d}`)}
           />
+          <GenderPicker value={gender} onChange={(g) => { touched.current = true; setGender(g); }} />
         </>
       )}
 
@@ -259,12 +298,15 @@ export default function ProfilePage() {
                 : t(`region.${legs[0].region}`)}
             </dd>
             <dt>{t("trip.start")}</dt><dd>{p.start_date} → {p.end_date}</dd>
+            <dt>{t("hours.label")}</dt>
+            <dd>{service.kind === "FULL_DAY" ? t("hours.fullDay") : t("hours.someHours", { start: service.start, end: service.end })}</dd>
             <dt>{t("trip.party")}</dt><dd>{p.party_size}</dd>
             <dt>{t("trip.budget")}</dt><dd>₩{p.budget_per_day.toLocaleString()}</dd>
             <dt>{t("trip.language")}</dt><dd>{p.languages.map((l) => t(`lang.${l}`)).join(", ")}</dd>
             <dt>{t("needs.mobility")}</dt><dd>{(t(`mobility.${p.mobility}`) as unknown as string[])[0]}</dd>
             <dt>{t("needs.interests")}</dt><dd>{p.interests.map((i) => t(`interest.${i}`)).join(", ") || "–"}</dd>
             <dt>{t("needs.dietary")}</dt><dd>{p.dietary.map((d) => t(`diet.${d}`)).join(", ") || "–"}</dd>
+            <dt>{t("card.genderPref")}</dt><dd>{t(`card.gender.${gender}`)}</dd>
           </dl>
         </section>
       )}
