@@ -12,7 +12,8 @@ async function call<T>(method: string, path: string, token: string | null, body?
   if (res.status === 204) return undefined as T; // deleted: no body
   if (!res.ok) {
     const body = await res.json().catch(() => null);
-    throw new ApiError(res.status, typeof body?.detail === "string" ? body.detail : "");
+    // 405: the server doesn't have this action yet (an older deployment); the screens show their own message
+    throw new ApiError(res.status, res.status !== 405 && typeof body?.detail === "string" ? body.detail : "");
   }
   return res.json();
 }
