@@ -106,25 +106,32 @@ def fill_with_ai_draft(itinerary_id: int) -> None:
         tourist = db.get(Tourist, db.get(Trip, segment.trip_id).tourist_id)
         guide = db.get(Guide, booking.guide_id)
 
+        # Everything the AI needs, copied into plain values first
+        request = dict(
+            region=segment.region.value,
+            start_date=booking.start_date.isoformat(),
+            end_date=booking.end_date.isoformat(),
+            service_type=booking.service_type.value,
+            start_time=hhmm(booking.start_time),
+            end_time=hhmm(booking.end_time),
+            group_size=segment.group_size,
+            transport_preference=segment.transport_preference.value,
+            attributes=list(segment.attributes),
+            budget=segment.budget,
+            preferred_language=tourist.preferred_language.value,
+            mobility_level=tourist.mobility_level.value,
+            dietary=list(tourist.dietary),
+            dietary_notes=tourist.dietary_notes,
+            special_requests=extra_requests(tourist),
+            guide_languages=list(guide.languages),
+        )
+        # End the read transaction before the slow AI call. Neon closes a connection
+        # that sits "idle in transaction" too long, which made the draft fail.
+        # (Ported from afiqzulhusni05's PR #6.)
+        db.rollback()
+
         try:
-            stops = call_with_retries(lambda: generate_itinerary(
-                region=segment.region.value,
-                start_date=booking.start_date.isoformat(),
-                end_date=booking.end_date.isoformat(),
-                service_type=booking.service_type.value,
-                start_time=hhmm(booking.start_time),
-                end_time=hhmm(booking.end_time),
-                group_size=segment.group_size,
-                transport_preference=segment.transport_preference.value,
-                attributes=list(segment.attributes),
-                budget=segment.budget,
-                preferred_language=tourist.preferred_language.value,
-                mobility_level=tourist.mobility_level.value,
-                dietary=list(tourist.dietary),
-                dietary_notes=tourist.dietary_notes,
-                special_requests=extra_requests(tourist),
-                guide_languages=list(guide.languages),
-            ))
+            stops = call_with_retries(lambda: generate_itinerary(**request))
         except Exception:  # whatever goes wrong, the itinerary just stays empty
             logger.exception("AI draft failed for itinerary %s", itinerary_id)
             return
