@@ -14,6 +14,7 @@ import TouristHome from "./pages/TouristHome";
 import TripPage from "./pages/TripPage";
 import TeamTripPage from "./pages/TeamTripPage";
 import AvailabilityPage from "./pages/AvailabilityPage";
+import LandingPage from "./pages/LandingPage";
 import TripsPage from "./pages/TripsPage";
 import type { AccountRole } from "./types";
 
@@ -28,7 +29,13 @@ function Private({ roles, children }: { roles?: AccountRole[]; children: ReactNo
   return <>{children}</>;
 }
 
-/** "/" is each role's dashboard. */
+/** "/" is each role's dashboard, or the landing page for visitors who aren't signed in. */
+function Root() {
+  const { user } = useAuth();
+  if (user === null) return <LandingPage />;
+  return <Private><Home /></Private>;
+}
+
 function Home() {
   const { user } = useAuth();
   if (user?.role === "guide") return <GuideHome />;
@@ -57,7 +64,7 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
-        <Route path="/" element={<Private><Home /></Private>} />
+        <Route path="/" element={<Root />} />
         <Route path="/plan" element={<Private roles={TOURIST}><ProfilePage /></Private>} />
         <Route path="/bookings" element={<Private><BookingsPage /></Private>} />
         <Route path="/profile" element={<Private roles={PEOPLE}><MyProfile /></Private>} />

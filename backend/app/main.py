@@ -8,9 +8,11 @@ from app.database import get_db
 from app.routers import (
     auth,
     bookings,
+    emergency,
     guides,
     itineraries,
     matching,
+    places,
     tourists,
     trips,
     users,
@@ -34,6 +36,8 @@ app.include_router(matching.router)
 app.include_router(trips.router)
 app.include_router(bookings.router)
 app.include_router(itineraries.router)
+app.include_router(places.router)
+app.include_router(emergency.router)
 
 
 @app.get("/", include_in_schema=False)
