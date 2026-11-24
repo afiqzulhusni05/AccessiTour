@@ -212,14 +212,15 @@ def match_trip(
 
 @router.delete("/{trip_id}", status_code=204)
 def delete_trip(trip_id: int, user: User = Depends(require_tourist), db: Session = Depends(get_db)):
-    """Delete your own trip, once none of its bookings is still active. Its segments,
-    its cancelled, declined or completed bookings and their itineraries go with it."""
+    """Delete your own trip, once none of its bookings is still active. Its segments, its bookings
+    that are finished or never happened (including ones whose dates passed unconfirmed) and their
+    itineraries go with it."""
     tourist = get_tourist(db, user)
     trip = get_own_trip(db, tourist, trip_id)
-    statuses = list(db.scalars(
-        select(Booking.status).join(TripSegment, TripSegment.id == Booking.segment_id).where(TripSegment.trip_id == trip.id)
-    ))
-    problem = trip_delete_problem(statuses)
+    bookings = [tuple(row) for row in db.execute(
+        select(Booking.status, Booking.end_date).join(TripSegment, TripSegment.id == Booking.segment_id).where(TripSegment.trip_id == trip.id)
+    )]
+    problem = trip_delete_problem(bookings, dt.date.today())
     if problem:
         raise HTTPException(status_code=409, detail=problem)
     db.delete(trip)  # the database cascades to segments, bookings, itineraries and their stops

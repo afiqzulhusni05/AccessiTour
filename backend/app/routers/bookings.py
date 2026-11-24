@@ -278,10 +278,10 @@ def complete_booking(
 def delete_booking(
     booking_id: int, user: User = Depends(get_current_user), db: Session = Depends(get_db)
 ):
-    """The tourist or the guide removes a booking that never went ahead (cancelled or declined).
-    It disappears for both of them."""
+    """The tourist or the guide removes a booking that never went ahead: cancelled, declined, or
+    whose dates passed before both sides approved the itinerary. It disappears for both of them."""
     booking = get_my_booking(db, user, booking_id)
-    problem = booking_delete_problem(booking.status)
+    problem = booking_delete_problem(booking.status, booking.end_date, dt.date.today())
     if problem:
         raise HTTPException(status_code=409, detail=problem)
     db.delete(booking)
