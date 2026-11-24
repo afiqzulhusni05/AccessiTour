@@ -12,6 +12,8 @@ import PreferencesPage from "./pages/PreferencesPage";
 import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
 import SignupPage from "./pages/SignupPage";
+import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import ResetPasswordPage from "./pages/ResetPasswordPage";
 import TouristHome from "./pages/TouristHome";
 import TripPage from "./pages/TripPage";
 import TeamTripPage from "./pages/TeamTripPage";
@@ -66,6 +68,8 @@ export default function App() {
       <Routes>
         <Route path="/login" element={<LoginPage />} />
         <Route path="/signup" element={<SignupPage />} />
+        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+        <Route path="/reset-password" element={<ResetPasswordPage />} />
         <Route path="/" element={<Root />} />
         <Route path="/plan" element={<Private roles={TOURIST}><ProfilePage /></Private>} />
         <Route path="/bookings" element={<Private><BookingsPage /></Private>} />

@@ -73,6 +73,11 @@ export async function signup(req: SignupRequest): Promise<Session> {
   return { token: access, user: await getMe() };
 }
 
+/** Emails a link to choose a new password (if the email has an account). */
+export const requestPasswordReset = (email: string) => team.forgotPassword(email);
+/** Sets a new password with the token from that link. */
+export const resetPassword = (token: string, newPassword: string) => team.resetPassword(token, newPassword);
+
 // ---------- the tourist's saved preferences (the tourist profile) and the guide's profile
 
 /** Languages, mobility and food needs. Interests, budget and the number of travellers belong to each trip. */

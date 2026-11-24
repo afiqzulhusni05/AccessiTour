@@ -41,6 +41,7 @@ export default function LoginPage() {
         <p role="status" className="muted">{busy ? t("auth.waking") : ""}</p>
         <button type="submit" className="primary" disabled={busy}>{t("auth.signIn")}</button>
       </form>
+      <p className="switch"><Link to="/forgot-password">{t("reset.forgotLink")}</Link></p>
       <p className="switch">{t("auth.noAccount")} <Link to="/signup" state={{ from }}>{t("auth.signUp")}</Link></p>
     </div>
   );
