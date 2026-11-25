@@ -3,7 +3,7 @@
   --ink: #12263a;
   --paper: #f6f8fa;
   --harbor: #1f5fa8;
-  --tactile: #f2c230;
+  --tactile: #9dd4f5; /* light blue accent (was yellow) */
   --mist: #dce5ec;
   --muted: #4b5f72;
   --danger: #b3261e;
@@ -112,7 +112,7 @@ input[type="text"], input[type="number"], input[type="date"], input[type="time"]
 .cta p { margin: 0; }
 
 .notice { background: var(--mist); border-left: 6px solid var(--harbor); border-radius: 4px; padding: .7rem 1rem; }
-.notice.check { background: #fdf3cf; border-color: var(--tactile); font-weight: 600; }
+.notice.check { background: #e4f3fd; border-color: var(--tactile); font-weight: 600; }
 .share { background: #fff; border: 2px solid var(--mist); border-radius: 6px; padding: 1rem; margin: 1rem 0; }
 .share h2 { font-size: 1.05rem; }
 .share p { margin: .25rem 0 .75rem; }
@@ -288,7 +288,7 @@ td.num, th.num { text-align: right; font-variant-numeric: tabular-nums; }
 .bookings summary { cursor: pointer; color: var(--harbor); font-weight: 600; min-height: 32px; }
 .state.accepted { background: #e3f1e6; }
 .state.declined, .state.cancelled { background: #f3e3e1; }
-.state.pending { background: #fdf3cf; }
+.state.pending { background: #e4f3fd; }
 .danger { border-color: var(--danger); color: var(--danger); }
 .formpage form { margin-top: 1rem; }
 .verify { display: flex; flex-wrap: wrap; gap: .35rem .75rem; }
@@ -482,7 +482,7 @@ ol.plain { margin: 0; padding-left: 1.2rem; font-weight: 600; }
 .hero .lead { font-size: clamp(1.05rem, 2vw, 1.25rem); max-width: 36rem; opacity: .95; }
 .hero-actions { display: flex; flex-wrap: wrap; gap: .75rem; margin-top: 2rem; }
 .btn.cta { background: var(--tactile); color: var(--ink); border-color: var(--tactile); font-weight: 700; font-size: 1.05rem; padding-inline: 1.5rem; }
-.btn.cta:hover { background: #ffd447; }
+.btn.cta:hover { background: #bfe4fa; }
 .btn.light { color: #fff; border-color: #fff; }
 .btn.light:hover { background: rgba(255, 255, 255, .15); }
 .hero :focus-visible { outline-color: var(--tactile); }
@@ -508,7 +508,7 @@ ol.plain { margin: 0; padding-left: 1.2rem; font-weight: 600; }
 .city-photo { aspect-ratio: 16 / 10; background-size: cover; background-position: center; }
 .city-seoul .city-photo { background-image: url("/landing/seoul.jpg"), linear-gradient(135deg, #1f5fa8, #12263a); }
 .city-busan .city-photo { background-image: url("/landing/busan.jpg"), linear-gradient(135deg, #2a9d8f, #1f5fa8); }
-.city-jeju .city-photo { background-image: url("/landing/jeju.jpg"), linear-gradient(135deg, #f2c230, #e07a2f); }
+.city-jeju .city-photo { background-image: url("/landing/jeju.jpg"), linear-gradient(135deg, #9dd4f5, #1f5fa8); }
 .city-text { padding: 1.1rem 1.25rem 1.3rem; }
 
 .guide-band { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 1.25rem; }
@@ -707,7 +707,7 @@ input[type="date"], input[type="time"] { min-width: 0; max-width: 100%; display:
 .calday b { font-weight: 650; line-height: 1.1; }
 .calday small { font-size: .62rem; line-height: 1.1; white-space: nowrap; letter-spacing: -.02em; }
 .calday.free { background: #dff1e4; color: #145a2c; }
-.calday.short { background: #fdf1c9; color: #6b4b00; }
+.calday.short { background: #dcefff; color: #0d4d7a; }
 .calday.booked { background: var(--harbor); color: #fff; }
 .calday.off { background: #f1f3f6; color: var(--ink); }
 .calday.past { background: none; color: #a3adb8; cursor: default; opacity: 1; }
@@ -719,7 +719,7 @@ input[type="date"], input[type="time"] { min-width: 0; max-width: 100%; display:
 .callegend li { display: inline-flex; align-items: center; gap: .35rem; }
 .dot { display: inline-block; width: .85rem; height: .85rem; border-radius: 4px; background: #f1f3f6; border: 1px solid #c9d1da; }
 .dot.free { background: #dff1e4; border-color: #8cc79d; }
-.dot.short { background: #fdf1c9; border-color: #e0c35a; }
+.dot.short { background: #dcefff; border-color: #7cc3ee; }
 .dot.booked { background: var(--harbor); border-color: var(--harbor); }
 .calhint { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .25rem 1rem; margin-top: .75rem; }
 .calhint p { margin: 0; }
