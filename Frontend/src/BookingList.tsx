@@ -53,6 +53,10 @@ export default function BookingList({ bookings, viewer, onChange }: {
   const today = new Date().toLocaleDateString("sv");
   // The team API lets the guide close a trip only once both sides approved the itinerary and the last day has come.
   const confirmed = (b: Booking) => b.team?.status === "CONFIRMED";
+  // After its last day a booking can't be cancelled; if it was never confirmed, it can be deleted instead
+  const ended = (b: Booking) => b.trip.end_date < today;
+  const deletable = (b: Booking) => Boolean(b.team) && (b.status === "cancelled" || b.status === "declined"
+    || (ended(b) && (b.status === "pending" || b.status === "accepted") && !confirmed(b)));
   const list = (xs: string[], ns: string) => xs.map((x) => t(`${ns}.${x}`)).join(", ") || "–";
 
   return (
@@ -93,7 +97,7 @@ export default function BookingList({ bookings, viewer, onChange }: {
                 </dl>
               </details>
               <div className="rowbtns">
-                {b.status === "pending" && viewer === "guide" && (
+                {b.status === "pending" && viewer === "guide" && p.start_date >= today && (
                   <>
                     <button type="button" className="primary small" disabled={working} onClick={() => act(b, "accept")} aria-label={`${t("booking.accept")}: ${b.owner_name}`}>{t("booking.accept")}</button>
                     <button type="button" className="ghost small danger" disabled={working} onClick={() => act(b, "decline")} aria-label={`${t("booking.decline")}: ${b.owner_name}`}>{t("booking.decline")}</button>
@@ -102,15 +106,16 @@ export default function BookingList({ bookings, viewer, onChange }: {
                 {viewer === "guide" && b.status === "accepted" && confirmed(b) && (p.end_date <= today ? (
                   <button type="button" className="primary small" disabled={working} onClick={() => act(b, "complete")}>{t("booking.complete")}</button>
                 ) : <p className="muted small-note">{t("booking.completeLater", { date: p.end_date })}</p>)}
-                {viewer === "guide" && b.status === "accepted" && !confirmed(b) && p.end_date <= today && <p className="muted small-note">{t("booking.completeNeedsApproval")}</p>}
-                {b.team && b.status === "accepted" && (
+                {viewer === "guide" && b.status === "accepted" && !confirmed(b) && p.end_date === today && <p className="muted small-note">{t("booking.completeNeedsApproval")}</p>}
+                {ended(b) && (b.status === "pending" || b.status === "accepted") && !confirmed(b) && <p className="muted small-note">{t("booking.endedUnconfirmed")}</p>}
+                {b.team && b.status === "accepted" && !ended(b) && (
                   <button type="button" className="ghost small danger" disabled={working} onClick={() => act(b, "cancel")}>{t("booking.cancelBooking")}</button>
                 )}
-                {b.team && (b.status === "cancelled" || b.status === "declined") && (
+                {deletable(b) && (
                   <button type="button" className="ghost small danger" disabled={working} onClick={() => remove(b)}
                     aria-label={`${t("booking.delete")}: ${t(`region.${p.region}`)} ${p.start_date}`}>{t("booking.delete")}</button>
                 )}
-                {b.status === "pending" && viewer !== "guide" && (
+                {b.status === "pending" && viewer !== "guide" && !ended(b) && (
                   <button type="button" className="ghost small danger" disabled={working} onClick={() => act(b, "cancel")}>{t("booking.cancel")}</button>
                 )}
                 {b.itinerary_id !== null && (
