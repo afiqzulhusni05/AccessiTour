@@ -120,6 +120,7 @@ async function toBooking(tok: string, b: team.TeamBooking): Promise<Booking> {
     team: {
       trip_id: b.trip_id, segment_id: b.segment_id, total_price: b.total_price, status: b.status,
       hours: b.start_time && b.end_time ? `${b.start_time.slice(0, 5)}–${b.end_time.slice(0, 5)}` : null,
+      paid_at: b.paid_at ?? null,
     },
   };
 }
@@ -130,6 +131,8 @@ export const decideBooking = (id: number, action: "accept" | "decline" | "cancel
   authed(async (tok) => toBooking(tok, await team.bookingAction(tok, id, action)));
 export const deleteBooking = (id: number) => authed((tok) => team.deleteBooking(tok, id));
 export const deleteTrip = (id: number) => authed((tok) => team.deleteTrip(tok, id));
+/** DEMO payment of the guide's fee: nothing is charged; the booking is only marked as paid. */
+export const payBooking = (id: number) => authed(async (tok) => toBooking(tok, await team.payBooking(tok, id)));
 /** Asks a guide to take one segment (city) of a trip. */
 export const requestTeamBooking = (segmentId: number, guideId: number) =>
   authed(async (tok) => toBooking(tok, await team.createBooking(tok, segmentId, guideId)));
@@ -175,7 +178,7 @@ function toItinerary(it: team.TeamItinerary): Itinerary {
     },
     source: "plan", days: days(it.start_date, it.end_date), accessibility_review: it.accessibility_review,
     approved_by_tourist: it.approved_by_tourist, approved_by_guide: it.approved_by_guide,
-    items, messages: it.comments.filter((c) => c.item_id === null).map(comment),
+    items, messages: it.comments.filter((c) => c.item_id === null).map(comment), created_at: it.created_at,
   };
 }
 
@@ -227,6 +230,7 @@ export const setStopProgress = (it: Itinerary, itemId: number, progress: Progres
 export const addComment = (it: Itinerary, itemId: number, body: string) =>
   authed(async (tok) => toItinerary(await team.addComment(tok, it.id, body, itemId)));
 export const sendMessage = (it: Itinerary, body: string) => authed(async (tok) => toItinerary(await team.addComment(tok, it.id, body, null)));
+export const requestAiDraft = (it: Itinerary) => authed(async (tok) => toItinerary(await team.requestAiDraft(tok, it.id)));
 export const approveItinerary = (it: Itinerary) => authed(async (tok) => toItinerary(await team.approve(tok, it.id)));
 
 // ---------- map: OpenStreetMap, straight from the browser

@@ -1,7 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
 import NearestToilet from "./NearestToilet";
-import { StopNav, type NavPrefs } from "./StopNav";
+import { StopNav } from "./StopNav";
 import TimeWheel from "./TimeWheel";
 import { MODES } from "./mapLinks";
 import { MAX_VISIT_MIN, overlapsNext, STATES, VISIT_PRESETS } from "./progress";
@@ -16,13 +16,15 @@ export function useDuration() {
   };
 }
 
-export function StopForm({ initial, days, submitLabel, busy, onSubmit, onCancel }: {
+export function StopForm({ initial, days, submitLabel, busy, onSubmit, onCancel, fixedSlot = false }: {
   initial: StopFields;
   days: number;
   submitLabel: string;
   busy: boolean;
   onSubmit: (f: StopFields) => void;
   onCancel: () => void;
+  /** Adding from a day's "+" menu: the day and start time are already decided, so they aren't asked for. */
+  fixedSlot?: boolean;
 }) {
   const { t } = useTranslation();
   const dur = useDuration();
@@ -36,6 +38,9 @@ export function StopForm({ initial, days, submitLabel, busy, onSubmit, onCancel 
   };
   return (
     <form className="stopform" onSubmit={submit}>
+      {fixedSlot ? (
+        <p className="muted">{t("collab.slot", { day: t("itinerary.day", { n: f.day_number }), time: f.start_time })}</p>
+      ) : (
       <div className="row">
         <label>{t("collab.dayField")}
           <select value={f.day_number} onChange={(e) => setF({ ...f, day_number: +e.target.value })}>
@@ -49,6 +54,7 @@ export function StopForm({ initial, days, submitLabel, busy, onSubmit, onCancel 
           <TimeWheel value={f.start_time} label={t("collab.time")} onChange={(v) => setF((prev) => ({ ...prev, start_time: v }))} />
         </div>
       </div>
+      )}
       <div className="row">
         <label>{t("sched.length")}
           <select
@@ -96,11 +102,10 @@ export function StopForm({ initial, days, submitLabel, busy, onSubmit, onCancel 
 
 const PROGRESS_MARK: Record<Progress, string> = { upcoming: "○", on_the_way: "→", visited: "✓", skipped: "×" };
 
-export function Stop({ item, prev, next, nav, near, accessNeeds, days, editable, isGuide, canComment, busy, onSave, onDelete, onCheck, onComment, onProgress }: {
+export function Stop({ item, prev, next, near, accessNeeds, days, editable, isGuide, canComment, busy, onSave, onDelete, onCheck, onComment, onProgress }: {
   item: ItineraryItem;
   prev?: ItineraryItem; // the stop before this one on the same day, for "directions from the previous stop"
   next?: ItineraryItem; // the stop after this one on the same day, to notice an overlap
-  nav: NavPrefs;
   near: string; // the trip's city, to narrow a search by name
   accessNeeds: boolean; // the traveller has a mobility need: offer the nearest accessible toilet
   days: number;
@@ -175,8 +180,8 @@ export function Stop({ item, prev, next, nav, near, accessNeeds, days, editable,
         {editing === null && (
           <StopNav
             place={{ name: item.place_name, lat: item.lat, lng: item.lng }} near={near}
-            prefs={item.transport ? { ...nav, mode: item.transport } : nav}
             prev={prev && { name: prev.place_name, lat: prev.lat, lng: prev.lng }}
+            mode={item.transport || undefined}
           />
         )}
         {editing === null && accessNeeds && item.lat !== null && item.lng !== null && (

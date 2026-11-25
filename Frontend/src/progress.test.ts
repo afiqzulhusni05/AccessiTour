@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { currentStop, overlapsNext, summarize } from "./progress";
+import { currentStop, nextFreeTime, overlapsNext, summarize } from "./progress";
 import type { Progress } from "./types";
 
 const stops = (...p: Progress[]) => p.map((progress, id) => ({ id, progress }));
@@ -44,5 +44,19 @@ describe("currentStop", () => {
     expect(currentStop(stops("visited", "upcoming", "on_the_way"))!.id).toBe(2);
     expect(currentStop(stops("visited", "skipped", "upcoming"))!.id).toBe(2);
     expect(currentStop(stops("visited", "skipped"))).toBeNull();
+  });
+});
+
+describe("nextFreeTime", () => {
+  it("starts an empty day at 10:00", () => {
+    expect(nextFreeTime([])).toBe("10:00");
+  });
+  it("goes after the day's last stop, using its length or an hour", () => {
+    expect(nextFreeTime([{ start_time: "10:00", duration_min: 90 }])).toBe("11:30");
+    expect(nextFreeTime([{ start_time: "13:15", duration_min: 0 }])).toBe("14:30"); // 14:15 rounded up
+    expect(nextFreeTime([{ start_time: "15:00", duration_min: 30 }, { start_time: "09:00", duration_min: 120 }])).toBe("15:30");
+  });
+  it("never goes later than 22:00", () => {
+    expect(nextFreeTime([{ start_time: "21:30", duration_min: 120 }])).toBe("22:00");
   });
 });

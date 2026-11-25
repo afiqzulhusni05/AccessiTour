@@ -5,6 +5,7 @@ import "leaflet/dist/leaflet.css";
 import { getRecommendations, placeNameAt } from "./api";
 import { cityById } from "./regions";
 import { StopForm } from "./Stop";
+import { directionsLink } from "./mapLinks";
 import { KINDS, loadNearby, PIN_TEXT, type Kind, type NearbyPlace } from "./nearby";
 import type { Itinerary, Recommendation, Recommendations, StopFields } from "./types";
 
@@ -188,11 +189,16 @@ export default function TripMap({ itinerary: it, editable, busy, onAdd }: {
               <ul className="nearby-list">
                 {found[k]!.slice(0, 6).map((p) => (
                   <li key={p.key}>
-                    {p.image && <img src={p.image} alt="" loading="lazy" />}
-                    <div>
-                      <strong>{p.name}</strong>
-                      {p.details.map((d) => <small key={d}>{d}</small>)}
-                    </div>
+                    {/* the whole entry opens Kakao Map with directions from where the person is to this place */}
+                    <a className="nearby-link" href={directionsLink({ name: p.name, lat: p.lat, lng: p.lng }) ?? undefined}
+                      target="_blank" rel="noopener noreferrer" aria-label={t("near.directionsTo", { place: p.name })}>
+                      {p.image && <img src={p.image} alt="" loading="lazy" />}
+                      <div>
+                        <strong>{p.name}</strong>
+                        {p.details.map((d) => <small key={d}>{d}</small>)}
+                        <span className="nearby-go">{t("near.directions")} →</span>
+                      </div>
+                    </a>
                   </li>
                 ))}
               </ul>

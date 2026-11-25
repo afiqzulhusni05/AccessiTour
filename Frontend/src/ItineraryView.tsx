@@ -1,14 +1,14 @@
 import { useEffect, useState } from "react";
 import { useTranslation } from "react-i18next";
-import { addComment, addStop, ApiError, approveItinerary, deleteStop, getItinerary, sendMessage, setStopProgress, updateStop } from "./api";
+import { addComment, addStop, ApiError, approveItinerary, requestAiDraft, deleteStop, getItinerary, sendMessage, setStopProgress, updateStop } from "./api";
 import Chat from "./Chat";
 import MealPicker from "./MealPicker";
 import { useLocalized } from "./names";
 import { Stop, StopForm } from "./Stop";
-import { NavSettings, useNavPrefs } from "./StopNav";
+import { NavNote } from "./StopNav";
 import TripMap from "./TripMap";
 import TripProgress from "./TripProgress";
-import { STATES } from "./progress";
+import { nextFreeTime, STATES } from "./progress";
 import type { Itinerary, ItineraryItem, Meal, Progress, Role } from "./types";
 
 const ROLES: Role[] = ["tourist", "guide"];
@@ -32,7 +32,6 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
   const [show, setShow] = useState<Progress | "all">("all"); // only hides stops on screen; counts use every stop
   const [menuDay, setMenuDay] = useState<number | null>(null); // the day whose "+" menu is open
   const [reopened, setReopened] = useState(false);
-  const [nav, setNav] = useNavPrefs();
   const [mealFor, setMealFor] = useState<{ day: number; meal: Meal } | null>(null);
 
   useEffect(() => {
@@ -90,6 +89,12 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
   const guideName = loc(it.guide_name, it.guide_name_ko);
   const final = it.approved_by_tourist && it.approved_by_guide;
   const editable = role !== null && (!final || reopened);
+  // The AI writes the first draft in the background after the itinerary is created (or asked again);
+  // it can take a few minutes. Until stops arrive, say so, instead of a bare "No stops yet".
+  const [askedAt, setAskedAt] = useState<number | null>(null);
+  const AI_WINDOW_MS = 5 * 60 * 1000;
+  const started = Math.max(it.created_at ? Date.parse(it.created_at) : 0, askedAt ?? 0);
+  const aiWriting = it.items.length === 0 && Date.now() - started < AI_WINDOW_MS;
   const checksOpen = it.items.some((i) => i.needs_accessibility_check);
   const mine = role === "guide" ? it.approved_by_guide : it.approved_by_tourist;
   const who = (r: Role) => (r === "guide" ? `${guideName} (${t("collab.role.guide")})` : t("collab.role.tourist"));
@@ -108,6 +113,18 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
         </>
       )}
       {checksOpen && <p className="notice check">{t("itinerary.checkNote")}</p>}
+      {it.items.length === 0 && role !== null && (aiWriting ? (
+        <div className="notice ai-status" role="status">
+          <span className="spinner" aria-hidden="true" />
+          <span><strong>{t("ai.creating")}</strong> {t("ai.wait")}</span>
+        </div>
+      ) : editable && (
+        <div className="notice">
+          <p>{t("ai.none")}</p>
+          <button type="button" className="ghost small" disabled={busy}
+            onClick={async () => { if (await run(() => requestAiDraft(it))) setAskedAt(Date.now()); }}>{t("ai.ask")}</button>
+        </div>
+      ))}
 
       <TripProgress items={it.items} title={progressTitle} />
 
@@ -115,7 +132,7 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
 
       <TripMap itinerary={it} editable={editable} busy={busy} onAdd={(f) => run(() => addStop(it, f))} />
 
-      <NavSettings prefs={nav} onChange={setNav} hasNeeds={it.trip.mobility !== "normal"} />
+      <NavNote hasNeeds={it.trip.mobility !== "normal"} />
 
       <label className="stopfilter">{t("progress.filter")}
         <select value={show} onChange={(e) => setShow(e.target.value as typeof show)}>
@@ -153,7 +170,7 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
             <ol className="stops">
               {items.map((item, n) => (show !== "all" && item.progress !== show) ? null : (
                 <Stop
-                  key={item.id} item={item} prev={items[n - 1]} next={items[n + 1]} nav={nav} near={t(`region.${it.trip.region}`)} accessNeeds={it.trip.mobility !== "normal"} days={it.days} editable={editable} isGuide={role === "guide"} canComment={role !== null} busy={busy}
+                  key={item.id} item={item} prev={items[n - 1]} next={items[n + 1]} near={t(`region.${it.trip.region}`)} accessNeeds={it.trip.mobility !== "normal"} days={it.days} editable={editable} isGuide={role === "guide"} canComment={role !== null} busy={busy}
                   onSave={(f, version) => run(() => updateStop(it, { ...item, version }, f))}
                   onDelete={() => run(() => deleteStop(it, item.id))}
                   onCheck={() => run(() => updateStop(it, item, { accessibility_checked: true }))}
@@ -164,8 +181,8 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
             </ol>
             {editable && addingTo === day && (
               <StopForm
-                initial={{ day_number: day, start_time: "12:00", place_name: "", activity: "" }}
-                days={it.days} submitLabel={t("collab.addSave")} busy={busy}
+                initial={{ day_number: day, start_time: nextFreeTime(items), place_name: "", activity: "" }}
+                days={it.days} submitLabel={t("collab.addSave")} busy={busy} fixedSlot
                 onSubmit={async (f) => (await run(() => addStop(it, f))) && setAddingTo(null)}
                 onCancel={() => setAddingTo(null)}
               />

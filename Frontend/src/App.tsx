@@ -13,6 +13,7 @@ import LoginPage from "./pages/LoginPage";
 import ProfilePage from "./pages/ProfilePage";
 import SignupPage from "./pages/SignupPage";
 import ForgotPasswordPage from "./pages/ForgotPasswordPage";
+import PaymentPage from "./pages/PaymentPage";
 import ResetPasswordPage from "./pages/ResetPasswordPage";
 import TouristHome from "./pages/TouristHome";
 import TripPage from "./pages/TripPage";
@@ -73,6 +74,7 @@ export default function App() {
         <Route path="/" element={<Root />} />
         <Route path="/plan" element={<Private roles={TOURIST}><ProfilePage /></Private>} />
         <Route path="/bookings" element={<Private><BookingsPage /></Private>} />
+        <Route path="/pay/:id" element={<Private roles={TOURIST}><PaymentPage /></Private>} />
         <Route path="/profile" element={<Private roles={PEOPLE}><MyProfile /></Private>} />
         <Route path="/preferences" element={<Navigate to="/profile" replace />} />
         <Route path="/t/:id" element={<Private roles={TOURIST}><TeamTripPage /></Private>} />

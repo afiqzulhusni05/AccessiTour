@@ -118,6 +118,10 @@ export default function BookingList({ bookings, viewer, onChange }: {
                 {b.status === "pending" && viewer !== "guide" && !ended(b) && (
                   <button type="button" className="ghost small danger" disabled={working} onClick={() => act(b, "cancel")}>{t("booking.cancel")}</button>
                 )}
+                {b.team?.paid_at && <span className="paid-badge">✓ {t("pay.paid")}</span>}
+                {viewer === "tourist" && b.team && !b.team.paid_at && (b.status === "accepted" || b.status === "completed") && (
+                  <Link to={`/pay/${b.id}`} className="primary btn small">{t("pay.payNow")}</Link>
+                )}
                 {b.itinerary_id !== null && (
                   <Link to={`/trips/${b.itinerary_id}`} className="primary btn small">{t("booking.open")}</Link>
                 )}

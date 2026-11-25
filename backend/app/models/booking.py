@@ -38,6 +38,8 @@ class Booking(Base):
     status: Mapped[BookingStatus] = mapped_column(
         pg_enum(BookingStatus, "booking_status"), default=BookingStatus.REQUESTED
     )
+    # When the tourist paid. The app's payment page is a demo: nothing is charged, this only records it.
+    paid_at: Mapped[dt.datetime | None] = mapped_column(DateTime(timezone=True))
     created_at: Mapped[dt.datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )

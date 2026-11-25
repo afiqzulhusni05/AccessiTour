@@ -58,6 +58,7 @@ def to_read(db: Session, booking: Booking) -> BookingRead:
             preferred_language=tourist.preferred_language,
             mobility_level=tourist.mobility_level,
         ),
+        paid_at=booking.paid_at,
         created_at=booking.created_at,
         updated_at=booking.updated_at,
     )
@@ -286,3 +287,28 @@ def delete_booking(
         raise HTTPException(status_code=409, detail=problem)
     db.delete(booking)
     db.commit()
+
+
+# The guide has agreed (or the tour is done), so the fee can be paid
+PAYABLE = (
+    BookingStatus.ACCEPTED,
+    BookingStatus.ITINERARY_DRAFT,
+    BookingStatus.IN_REVIEW,
+    BookingStatus.CONFIRMED,
+    BookingStatus.COMPLETED,
+)
+
+
+@router.post("/{booking_id}/pay", response_model=BookingRead)
+def pay_booking(booking_id: int, user: User = Depends(require_tourist), db: Session = Depends(get_db)):
+    """Records that the tourist paid the guide's fee. A DEMO: no payment provider is involved and
+    no money moves; it only marks the booking as paid so the app can show it."""
+    booking = get_my_booking(db, user, booking_id)
+    if booking.status not in PAYABLE:
+        raise HTTPException(status_code=409, detail="The guide has to accept the booking before it can be paid")
+    if booking.paid_at is not None:
+        raise HTTPException(status_code=409, detail="This booking is already paid")
+    booking.paid_at = dt.datetime.now(dt.timezone.utc)
+    db.commit()
+    db.refresh(booking)
+    return to_read(db, booking)

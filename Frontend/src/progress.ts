@@ -45,3 +45,19 @@ export function overlapsNext(stop: Timed, next: Timed | undefined): boolean {
   if (!next || stop.duration_min <= 0 || next.day_number !== stop.day_number) return false;
   return minutes(stop.start_time) + stop.duration_min > minutes(next.start_time);
 }
+
+
+const DAY_START = 10 * 60; // a day with no stops starts at 10:00
+const LATEST = 22 * 60;
+const toHhmm = (m: number) => `${String(Math.floor(m / 60)).padStart(2, "0")}:${String(m % 60).padStart(2, "0")}`;
+
+/**
+ * When a stop added to a day should start: half an hour-aligned, after the day's last stop ends
+ * (a stop without a length counts as one hour). 10:00 on an empty day; never later than 22:00.
+ */
+export function nextFreeTime(dayStops: { start_time: string; duration_min: number }[]): string {
+  if (dayStops.length === 0) return toHhmm(DAY_START);
+  const ends = dayStops.map((s) => minutes(s.start_time) + (s.duration_min > 0 ? s.duration_min : 60));
+  const after = Math.ceil(Math.max(...ends) / 30) * 30;
+  return toHhmm(Math.min(after, LATEST));
+}

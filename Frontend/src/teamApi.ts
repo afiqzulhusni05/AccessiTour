@@ -250,6 +250,7 @@ export interface TeamBooking {
   end_time: string | null;
   group_size: number;
   total_price: number;
+  paid_at?: string | null; // set by the demo payment
   guide: TeamGuideSummary;
   tourist: { id: number; full_name: string; preferred_language: string; mobility_level: string };
   created_at: string;
@@ -275,6 +276,8 @@ export async function myBookings(token: string): Promise<TeamBooking[]> {
 }
 /** Deletes a cancelled or declined booking, for both the tourist and the guide. */
 export const deleteBooking = (token: string, id: number) => call<void>("DELETE", `/bookings/${id}`, token);
+/** DEMO payment: records the booking as paid. No payment provider is involved and nothing is charged. */
+export const payBooking = (token: string, id: number) => call<TeamBooking>("POST", `/bookings/${id}/pay`, token);
 export const bookingAction = (token: string, id: number, action: "accept" | "decline" | "cancel" | "complete") =>
   call<TeamBooking>("POST", `/bookings/${id}/${action}`, token);
 
@@ -332,6 +335,7 @@ export interface TeamItinerary {
   approved_by_guide: boolean;
   items: TeamItem[];
   comments: TeamComment[];
+  created_at?: string; // the AI draft is written in the background just after this
 }
 export interface TeamItinerarySummary {
   id: number; booking_id: number; trip_id: number; region: string; start_date: string; end_date: string;
@@ -352,6 +356,8 @@ export const setProgress = (token: string, id: number, itemId: number, progress:
 export const checkItem = (token: string, id: number, itemId: number) => call<TeamItinerary>("POST", `${IT}/${id}/items/${itemId}/check`, token);
 export const addComment = (token: string, id: number, body: string, itemId: number | null) =>
   call<TeamItinerary>("POST", `${IT}/${id}/comments`, token, { body, item_id: itemId });
+/** Asks the AI again for a first draft of an itinerary that still has no stops (they appear a little later). */
+export const requestAiDraft = (token: string, id: number) => call<TeamItinerary>("POST", `${IT}/${id}/ai-draft`, token);
 export const approve = (token: string, id: number) => call<TeamItinerary>("POST", `${IT}/${id}/approve`, token);
 
 // ---------- help near a point (restrooms, restaurants, emergency hospitals)

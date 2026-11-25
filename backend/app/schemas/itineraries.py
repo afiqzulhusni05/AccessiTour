@@ -103,6 +103,7 @@ class ItineraryRead(BaseModel):
     approved_by_guide: bool
     items: list[ItemRead]
     comments: list[CommentRead]
+    created_at: dt.datetime  # the AI draft is written in the background just after this
 
 
 class ItinerarySummary(BaseModel):

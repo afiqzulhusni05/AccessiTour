@@ -86,6 +86,7 @@ def read(db: Session, itinerary: Itinerary, booking: Booking, user: User) -> Iti
         start_date=b.start_date, end_date=b.end_date, group_size=b.group_size, tourist=b.tourist, guide=b.guide,
         you_are=side(user), accessibility_review=itinerary.needs_accessibility_check,
         approved_by_tourist=itinerary.approved_by_tourist, approved_by_guide=itinerary.approved_by_guide,
+        created_at=itinerary.created_at,
         items=[ItemRead.model_validate(i, from_attributes=True) for i in items],
         comments=[
             CommentRead(id=c.id, item_id=c.item_id, author=side(u), author_name=u.full_name, body=c.body, created_at=c.created_at)

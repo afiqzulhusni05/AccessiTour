@@ -36,5 +36,6 @@ class BookingRead(BaseModel):
     total_price: int
     guide: GuideSummary
     tourist: TouristBrief
+    paid_at: dt.datetime | None = None
     created_at: dt.datetime
     updated_at: dt.datetime

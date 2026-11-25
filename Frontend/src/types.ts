@@ -88,6 +88,7 @@ export interface ItineraryItem {
 export interface Itinerary {
   id: number;
   booking_id?: number;
+  created_at?: string;
   owner_name: string; // the tourist who created it
   guide_id: number;
   guide_name: string;
@@ -225,6 +226,7 @@ export interface Booking {
     trip_id: number; segment_id: number; total_price: number;
     status: string; // the team API's own status (REQUESTED … CONFIRMED, COMPLETED), finer than `status`
     hours: string | null; // "10:00–14:00" for a short session
+    paid_at: string | null; // when the tourist paid (demo payment)
   };
 }
 
