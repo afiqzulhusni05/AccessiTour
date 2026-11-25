@@ -246,11 +246,7 @@ th { color: var(--muted); font-weight: 600; border-top: 0; }
   .topbar #top-actions:empty { display: none; }
   .topbar .whoami-text { display: none; }
   .topbar .avatar { width: 2rem; height: 2rem; }
-  .topbar .langmenu svg { display: none; } /* the select is enough; saves room for the chat button */
-  .langmenu select { max-width: 6.5rem; }
-}
-@media (max-width: 24rem) {
-  .topbar .whoami { display: none; } /* very narrow phones: the sign-out button stays */
+
   /* SOS sits just above the tab bar */
   body:has(.shell) .sos-fab { bottom: calc(4.75rem + env(safe-area-inset-bottom)); width: 56px; height: 56px; }
   .page { padding-top: 1.25rem; padding-bottom: 6rem; } /* room so the SOS button never covers the last button */
@@ -524,11 +520,17 @@ ol.plain { margin: 0; padding-left: 1.2rem; font-weight: 600; }
 .sos strong { background: var(--danger); color: #fff; padding: .15rem .6rem; border-radius: 6px; letter-spacing: .05em; }
 
 /* ---- Language menu ---- */
-.langmenu { display: inline-flex; align-items: center; gap: .35rem; font-weight: 600; }
-.langmenu select { width: auto; min-height: 40px; padding: .3rem .5rem; border-radius: 6px; font-weight: 600; }
-.langmenu.dark { color: #fff; }
-.langmenu.dark select { background: transparent; color: #fff; border-color: #fff; }
-.langmenu.dark option { color: var(--ink); }
+/* Language menu: just a globe button. The real <select> lies invisibly on top, so tapping the globe
+   opens the phone's own list of languages and screen readers still hear "Language". */
+.langmenu { position: relative; display: inline-grid; place-items: center; width: 44px; height: 44px; border: 2px solid var(--mist); border-radius: 8px; color: var(--ink); cursor: pointer; }
+.langmenu svg { width: 22px; height: 22px; }
+.langmenu select { position: absolute; inset: 0; width: 100%; height: 100%; min-height: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; font-size: 16px; }
+.langmenu:hover { background: rgba(18, 38, 58, .06); }
+.langmenu:focus-within { outline: 3px solid var(--harbor); outline-offset: 2px; }
+.langmenu.dark { color: #fff; border-color: rgba(255, 255, 255, .7); }
+.langmenu.dark:hover { background: rgba(255, 255, 255, .15); }
+.langmenu.dark:focus-within { outline-color: var(--tactile); }
+.langmenu option { color: var(--ink); }
 
 /* ---- SOS: always reachable, bottom-right, above everything else ---- */
 .sos-fab {

@@ -10,7 +10,7 @@ const en = {
   trip: {
     title: "Where and when are you travelling?",
     region: "City", start: "Start date", end: "End date", party: "Travellers",
-    budget: "Guide budget per day (KRW)", language: "Languages you want your guide to speak",
+    budget: "Guide budget per day (KRW)", language: "Guide languages",
     languageHint: "Choose every language that works for you. A guide who speaks any one of them can be matched.",
   },
   needs: {
@@ -435,7 +435,7 @@ const ko: typeof en = {
   trip: {
     title: "언제, 어디로 여행하시나요?",
     region: "도시", start: "시작일", end: "종료일", party: "인원",
-    budget: "가이드 일일 예산(원)", language: "가이드가 사용할 언어",
+    budget: "가이드 일일 예산(원)", language: "가이드 언어",
     languageHint: "가능한 언어를 모두 선택하세요. 그중 하나라도 구사하는 가이드가 추천돼요.",
   },
   needs: {
@@ -863,7 +863,7 @@ const ms: DeepPartial<typeof en> = {
   trip: {
     title: "Ke mana dan bila anda melancong?",
     region: "Bandar", start: "Tarikh mula", end: "Tarikh tamat", party: "Bilangan pelancong",
-    budget: "Bajet pemandu sehari (KRW)", language: "Bahasa yang anda mahu pemandu anda tuturkan",
+    budget: "Bajet pemandu sehari (KRW)", language: "Bahasa pemandu",
     languageHint: "Pilih semua bahasa yang sesuai untuk anda. Pemandu yang bertutur salah satu daripadanya boleh dipadankan.",
   },
   needs: { title: "Apakah keperluan perjalanan anda?", mobility: "Mobiliti", interests: "Minat", dietary: "Keperluan makanan" },
