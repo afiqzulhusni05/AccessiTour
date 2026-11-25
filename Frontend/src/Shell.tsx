@@ -58,13 +58,18 @@ export default function Shell({ user, children }: { user: User; children: ReactN
       </aside>
       <div className="main-col">
         <header className="topbar">
+          {/* on phones the sidebar becomes a bottom tab bar, so the name and sign-out move up here */}
+          <Link to="/" className="brand phone-only">{t("app")}</Link>
           {/* pages add their own buttons here (the itinerary chat icon) */}
           <div id="top-actions" />
           <LanguageMenu />
           <span className="whoami">
             <span className="avatar" aria-hidden="true">{user.display_name.slice(0, 1).toUpperCase()}</span>
-            <span>{user.display_name}<small>{t(`role.${user.role}`)}</small></span>
+            <span className="whoami-text">{user.display_name}<small>{t(`role.${user.role}`)}</small></span>
           </span>
+          <button type="button" className="icon-btn phone-only" onClick={signOut} aria-label={t("auth.signOut")} title={t("auth.signOut")}>
+            <Icon name="logout" />
+          </button>
         </header>
         <main id="main">{children}</main>
       </div>

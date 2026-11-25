@@ -176,7 +176,8 @@ th { color: var(--muted); font-weight: 600; border-top: 0; }
 .iconbtn { position: relative; padding: .45rem .6rem; }
 .badge { position: absolute; top: -8px; right: -8px; min-width: 1.4rem; height: 1.4rem; padding: 0 .3rem; border-radius: 999px; background: var(--tactile); color: var(--ink); font-size: .8rem; font-weight: 700; display: grid; place-items: center; border: 2px solid var(--ink); }
 .chatwin { position: fixed; z-index: 20; top: 4.75rem; right: clamp(.5rem, 4vw, 2.5rem); width: min(24rem, calc(100vw - 1rem)); height: min(32rem, calc(100vh - 5.75rem)); display: flex; flex-direction: column; background: var(--paper); border: 2px solid var(--ink); border-radius: 8px; box-shadow: 0 10px 30px rgba(18, 38, 58, .25); }
-@media (max-width: 30rem) { .chatwin { inset: 0; width: auto; height: auto; border-radius: 0; } }
+/* phones: full screen and above the bottom tab bar; the SOS button still floats on top */
+@media (max-width: 30rem) { .chatwin { inset: 0; width: auto; height: auto; border-radius: 0; z-index: 950; } }
 .chatwin header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; padding: .6rem .75rem; border-bottom: 2px solid var(--mist); }
 .chatwin h2 { font-size: 1.05rem; }
 .chatwin .commentform { margin: 0; padding: .6rem .75rem; border-top: 2px solid var(--mist); }
@@ -187,6 +188,7 @@ th { color: var(--muted); font-weight: 600; border-top: 0; }
 .chatlog small { display: block; font-size: .78rem; opacity: .85; }
 .tripmap { height: 24rem; border: 2px solid var(--ink); border-radius: 6px; margin: .75rem 0; isolation: isolate; cursor: crosshair; }
 .tripmap.readonly { cursor: grab; }
+@media (max-width: 30rem) { .tripmap { height: min(24rem, 55vh); } }
 .pin { display: grid; place-items: center; border-radius: 50%; font-weight: 700; font-size: .85rem; border: 2px solid var(--ink); box-shadow: 0 1px 4px rgba(18, 38, 58, .4); }
 .pin.stop { background: var(--harbor); color: #fff; border-color: #fff; }
 .pin.rec { background: var(--tactile); color: var(--ink); cursor: pointer; }
@@ -221,12 +223,37 @@ th { color: var(--muted); font-weight: 600; border-top: 0; }
 .topbar { display: flex; justify-content: flex-end; align-items: center; gap: .75rem; padding: .6rem clamp(1rem, 3vw, 2rem); background: #fff; border-bottom: 2px solid var(--mist); position: sticky; top: 0; z-index: 10; }
 .topbar .whoami { color: var(--ink); display: flex; align-items: center; gap: .6rem; text-align: left; }
 .avatar { display: grid; place-items: center; width: 2.25rem; height: 2.25rem; border-radius: 50%; background: var(--harbor); color: #fff; font-weight: 700; }
+.phone-only { display: none !important; }
+.icon-btn { min-width: 44px; padding: 0; justify-content: center; border-color: var(--mist); color: var(--ink); }
+/* Phones and narrow tablets: the menu becomes a bottom tab bar, the top bar keeps only the essentials */
 @media (max-width: 52rem) {
+  .phone-only { display: inline-flex !important; }
   .shell { flex-direction: column; }
-  .side { flex: none; position: static; height: auto; flex-direction: row; align-items: center; gap: .5rem; padding: .5rem .75rem; overflow-x: auto; }
-  .side .brand small { display: none; }
-  .side nav { flex-direction: row; margin: 0; }
-  .side nav a, .side .logout { white-space: nowrap; }
+  .side {
+    position: fixed; left: 0; right: 0; bottom: 0; top: auto; z-index: 900; height: auto; flex: none;
+    flex-direction: row; padding: .25rem .25rem max(.25rem, env(safe-area-inset-bottom));
+    box-shadow: 0 -2px 10px rgba(18, 38, 58, .2);
+  }
+  .side .brand, .side .logout { display: none; }
+  .side nav { flex-direction: row; margin: 0; gap: .15rem; width: 100%; }
+  .side nav a {
+    flex: 1 1 0; min-width: 0; flex-direction: column; justify-content: center; gap: .15rem;
+    min-height: 56px; padding: .3rem .15rem; font-size: .72rem; line-height: 1.15; text-align: center; font-weight: 600;
+  }
+  .main-col { padding-bottom: calc(4.5rem + env(safe-area-inset-bottom)); }
+  .topbar { gap: .5rem; padding: .45rem .75rem; }
+  .topbar .brand { color: var(--ink); margin-right: auto; font-size: 1.1rem; }
+  .topbar #top-actions:empty { display: none; }
+  .topbar .whoami-text { display: none; }
+  .topbar .avatar { width: 2rem; height: 2rem; }
+  .topbar .langmenu svg { display: none; } /* the select is enough; saves room for the chat button */
+  .langmenu select { max-width: 6.5rem; }
+}
+@media (max-width: 24rem) {
+  .topbar .whoami { display: none; } /* very narrow phones: the sign-out button stays */
+  /* SOS sits just above the tab bar */
+  body:has(.shell) .sos-fab { bottom: calc(4.75rem + env(safe-area-inset-bottom)); width: 56px; height: 56px; }
+  .page { padding-top: 1.25rem; padding-bottom: 6rem; } /* room so the SOS button never covers the last button */
 }
 
 /* ---- Dashboards ---- */
@@ -575,3 +602,27 @@ ol.plain { margin: 0; padding-left: 1.2rem; font-weight: 600; }
 .pay-total { display: flex; justify-content: space-between; align-items: baseline; margin: 0; padding-top: .75rem; border-top: 2px solid var(--mist); }
 .pay-total strong { font-size: 1.5rem; }
 .paid-badge { display: inline-flex; align-items: center; padding: .1rem .6rem; border-radius: 999px; background: #e3f1e6; color: #1e7a3c; font-weight: 700; font-size: .85rem; }
+
+/* ---- Phone tweaks that must come after the base rules ---- */
+@media (max-width: 30rem) {
+  .kpis { grid-template-columns: 1fr 1fr; gap: .6rem; margin: 1rem 0; }
+  .tile { padding: .7rem .8rem; }
+  .tile strong { font-size: 1.6rem; }
+  /* label above value, so a long label ("Languages you want your guide to speak") can't push the page sideways */
+  .facts { grid-template-columns: 1fr; gap: 0; }
+  .facts dt { margin-top: .7rem; font-size: .92rem; }
+  .facts dt:first-child { margin-top: 0; }
+  .facts dd { overflow-wrap: anywhere; }
+  .emergency-card { padding: .9rem 1rem; }
+  .actions { flex-wrap: wrap; }
+  /* thumb-sized buttons that share each row instead of leaving ragged gaps */
+  .small { min-height: 44px; }
+  .stops .small, .stops a.btn.small { min-height: 40px; } /* stop buttons stay compact but easier to hit */
+  .rowbtns > .btn, .rowbtns > button, .rowbtns > a,
+  .stopnav li { flex: 1 1 auto; }
+  .rowbtns > .btn, .rowbtns > button, .rowbtns > a, .stopnav a.btn { justify-content: center; text-align: center; }
+  .stopnav a.btn { width: 100%; }
+  .head { flex-wrap: wrap; }
+}
+/* Sign-in forms: empty message lines take no space, but stay readable for screen readers when filled */
+.authcard form > p[role]:empty { position: absolute; width: 1px; height: 1px; overflow: hidden; margin: 0; }
