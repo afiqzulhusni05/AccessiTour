@@ -221,7 +221,7 @@ export default function TripMap({ itinerary: it, editable, busy, onAdd }: {
           {recs && recState === "idle" && (
             <>
               <h3>{t("map.recsTitle")}</h3>
-              <p className="muted">{t({ ai: "map.recsAi", osm: "map.recsOsm", sample: "map.recsSample" }[recs.source])}</p>
+              <p className="muted">{t({ ai: "map.recsAi", tourapi: "map.recsTour", osm: "map.recsOsm", sample: "map.recsSample" }[recs.source])}</p>
               {recs.places.length === 0 && <p>{t("map.noRecs")}</p>}
               <ul className="recs">
                 {recs.places.map((r) => (

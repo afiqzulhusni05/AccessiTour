@@ -382,6 +382,13 @@ export const nearbyRestrooms = (token: string, lat: number, lng: number, accessi
   call<TeamRestroom[]>("GET", `/places/restrooms?${near(lat, lng)}&radius_m=1500&limit=15${accessibleOnly ? "&accessible_only=true" : ""}`, token);
 export const nearbyRestaurants = (token: string, lat: number, lng: number) =>
   call<TeamRestaurant[]>("GET", `/places/restaurants?${near(lat, lng)}&radius_m=1500&limit=15`, token);
+export interface TeamSight {
+  content_id: string | null; name: string; kind: string; address: string | null; phone: string | null;
+  latitude: number; longitude: number; distance_m: number | null; image_url: string | null; thumbnail_url: string | null;
+}
+/** Tourist attractions and cultural sites from TourAPI, closest first. */
+export const nearbySights = (token: string, lat: number, lng: number, radiusM: number, limit = 15) =>
+  call<TeamSight[]>("GET", `/places/sights?${near(lat, lng)}&radius_m=${radiusM}&limit=${limit}`, token);
 /** No sign-in needed: nobody should have to log in during an emergency. */
 export const nearbyHospitals = (lat: number, lng: number) =>
   call<TeamEmergency>("GET", `/emergency/hospitals?${near(lat, lng)}&limit=5`, null);

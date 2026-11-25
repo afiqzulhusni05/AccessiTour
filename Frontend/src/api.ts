@@ -6,7 +6,7 @@
 import * as osm from "./osm";
 import * as team from "./teamApi";
 import type {
-  AccountRole, Booking, EmergencyCard, BookingStatus, Bounds, Comment, Cuisine, GuideProfileIn, Itinerary, ItineraryItem, ItinerarySummary,
+  AccountRole, Booking, EmergencyCard, BookingStatus, Bounds, Recommendations, Comment, Cuisine, GuideProfileIn, Itinerary, ItineraryItem, ItinerarySummary,
   Meal, MealDiet, Progress, Role, SignupRequest, StopFields, Transport, TripPreferences, User,
 } from "./types";
 
@@ -235,9 +235,31 @@ export const approveItinerary = (it: Itinerary) => authed(async (tok) => toItine
 
 // ---------- map: OpenStreetMap, straight from the browser
 
-/** Suggestions in the part of the map in view. Fails when the area is too large or the map servers are busy. */
-export async function getRecommendations(it: Itinerary, bounds: Bounds) {
-  const found = await osm.nearbyPlaces(it, bounds);
+/** Straight-line distance in metres. */
+function metresBetween(a: { lat: number; lng: number }, b: { lat: number; lng: number }) {
+  const rad = Math.PI / 180, dLat = (b.lat - a.lat) * rad, dLng = (b.lng - a.lng) * rad;
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(a.lat * rad) * Math.cos(b.lat * rad) * Math.sin(dLng / 2) ** 2;
+  return 2 * 6371000 * Math.asin(Math.sqrt(h));
+}
+
+/** Suggestions in an area (the map in view, or a box around a day's stops). Used by the map's
+ *  "Suggest places" button and by "Add a stop", so both give the same places.
+ *  Asks the team server's TourAPI lookup first, then OpenStreetMap; fails when both can't answer. */
+export async function getRecommendations(it: Itinerary, bounds: Bounds): Promise<Recommendations> {
+  const centre = { lat: (bounds.north + bounds.south) / 2, lng: (bounds.east + bounds.west) / 2 };
+  const corner = { lat: bounds.north, lng: bounds.east };
+  const radius = Math.round(Math.min(20000, Math.max(300, metresBetween(centre, corner))));
+  const planned = new Set(it.items.map((i) => i.place_name.trim().toLowerCase()));
+  try {
+    const sights = await authed((tok) => team.nearbySights(tok, centre.lat, centre.lng, radius, 15));
+    const places = sights
+      .filter((s) => !planned.has(s.name.trim().toLowerCase()))
+      .map((s) => ({ place_name: s.name, activity: s.kind, lat: s.latitude, lng: s.longitude }));
+    if (places.length) return { source: "tourapi", places };
+  } catch (e) {
+    if (e instanceof ApiError && e.status === 401) throw e;
+  }
+  const found = await osm.nearbyPlaces(it, bounds).catch(() => null);
   if (!found) throw new ApiError(503);
   return found;
 }

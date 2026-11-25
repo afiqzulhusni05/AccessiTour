@@ -27,3 +27,16 @@ class RestaurantRead(BaseModel):
     distance_m: int | None
     image_url: str | None
     thumbnail_url: str | None
+
+
+class SightRead(BaseModel):
+    content_id: str | None
+    name: str  # English name, usually with the Korean name in brackets
+    kind: str  # Tourist attraction or Cultural site
+    address: str | None
+    phone: str | None
+    latitude: float
+    longitude: float
+    distance_m: int | None
+    image_url: str | None
+    thumbnail_url: str | None

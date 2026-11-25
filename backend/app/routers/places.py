@@ -1,5 +1,5 @@
-"""Useful places near a point, for the trip map: public restrooms and
-restaurants (TourAPI). Emergency hospitals are in routers/emergency.py."""
+"""Useful places near a point, for the trip map: public restrooms, and
+restaurants and sights to visit (TourAPI). Emergency hospitals are in routers/emergency.py."""
 
 from fastapi import APIRouter, Depends, HTTPException, Query, status
 from sqlalchemy import select
@@ -10,8 +10,8 @@ from app.database import get_db
 from app.deps import get_current_user
 from app.models import PublicRestroom, User
 from app.places import bounding_box, distance_m
-from app.schemas.places import RestaurantRead, RestroomRead
-from app.services.tourapi import TourApiError, fetch_nearby_restaurants
+from app.schemas.places import RestaurantRead, RestroomRead, SightRead
+from app.services.tourapi import TourApiError, fetch_nearby_restaurants, fetch_nearby_sights
 
 router = APIRouter(prefix="/api/v1/places", tags=["places"])
 
@@ -74,3 +74,25 @@ def nearby_restaurants(
     except TourApiError as exc:
         raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
     return [RestaurantRead(**r) for r in found]
+
+
+@router.get("/sights", response_model=list[SightRead])
+def nearby_sights(
+    lat: float = Query(ge=-90, le=90),
+    lng: float = Query(ge=-180, le=180),
+    radius_m: int = Query(default=1500, ge=100, le=20000),
+    limit: int = Query(default=10, ge=1, le=30),
+    _: User = Depends(get_current_user),
+):
+    """Tourist attractions and cultural sites near (lat, lng) from TourAPI, in English, closest first.
+    Used for place suggestions when adding stops to an itinerary."""
+    if not settings.data_go_kr_key:
+        raise HTTPException(
+            status.HTTP_503_SERVICE_UNAVAILABLE,
+            "Place search is not set up (DATA_GO_KR_KEY missing).",
+        )
+    try:
+        found = fetch_nearby_sights(settings.data_go_kr_key, lat, lng, radius_m, limit)
+    except TourApiError as exc:
+        raise HTTPException(status.HTTP_502_BAD_GATEWAY, str(exc)) from exc
+    return [SightRead(**s) for s in found]

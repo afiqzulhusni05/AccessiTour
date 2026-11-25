@@ -1,4 +1,4 @@
-"""Restaurants near a point, from the Korea Tourism Organization's English
+"""Restaurants and sights near a point, from the Korea Tourism Organization's English
 tourist information service (TourAPI, 한국관광공사 영문 관광정보서비스, via data.go.kr).
 
 Kept free of FastAPI and settings so it can be tested on its own:
@@ -128,3 +128,29 @@ def fetch_nearby_restaurants(
     except requests.RequestException as exc:
         raise TourApiError("Could not reach TourAPI") from exc
     return parse_restaurants(response.text)[:limit]
+
+
+# contentTypeId in the English service -> how to describe a place of that type
+SIGHT_TYPES = {"76": "Tourist attraction", "78": "Cultural site"}
+
+
+def fetch_nearby_sights(api_key: str, lat: float, lng: float, radius_m: int, limit: int) -> list[dict]:
+    """Tourist attractions and cultural sites (museums, palaces, galleries) closest to (lat, lng)."""
+    found: list[dict] = []
+    for content_type, kind in SIGHT_TYPES.items():
+        params = {
+            "serviceKey": api_key, "MobileOS": "ETC", "MobileApp": "AccessiTour", "_type": "json",
+            "mapX": lng, "mapY": lat, "radius": radius_m, "contentTypeId": content_type,
+            "arrange": "E", "numOfRows": limit, "pageNo": 1,
+        }
+        try:
+            response = requests.get(LOCATION_LIST_URL, params=params, timeout=TIMEOUT_SECONDS)
+            response.raise_for_status()
+        except requests.RequestException as exc:
+            raise TourApiError("Could not reach TourAPI") from exc
+        for place in parse_restaurants(response.text):  # same answer format as for restaurants
+            place.pop("cuisine")
+            place["kind"] = kind
+            found.append(place)
+    found.sort(key=lambda p: p["distance_m"] if p["distance_m"] is not None else 10**9)
+    return found[:limit]

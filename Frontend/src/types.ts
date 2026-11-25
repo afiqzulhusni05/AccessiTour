@@ -131,7 +131,7 @@ export interface Recommendation {
 }
 
 export interface Recommendations {
-  source: "ai" | "osm" | "sample";
+  source: "ai" | "tourapi" | "osm" | "sample";
   places: Recommendation[];
 }
 

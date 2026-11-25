@@ -66,3 +66,35 @@ def test_a_key_problem_is_reported():
 def test_an_error_result_code_is_reported():
     with pytest.raises(TourApiError, match="0022"):
         parse_restaurants(answer("", code="0022"))
+
+
+def test_sights_merge_attractions_and_cultural_sites_closest_first(monkeypatch):
+    from app.services import tourapi
+
+    palace = {"addr1": "161 Sajik-ro, Jongno-gu, Seoul", "contentid": "264337", "dist": "900.5",
+              "firstimage": "", "firstimage2": "", "mapx": "126.9769", "mapy": "37.5796", "tel": "",
+              "title": "Gyeongbokgung Palace (경복궁)"}
+    museum = {"addr1": "37 Samcheong-ro, Jongno-gu, Seoul", "contentid": "129703", "dist": "300.0",
+              "firstimage": "http://example.test/m.jpg", "firstimage2": "", "mapx": "126.9790", "mapy": "37.5770",
+              "tel": "", "title": "National Folk Museum of Korea (국립민속박물관)"}
+    asked = []
+
+    class Reply:
+        def __init__(self, text):
+            self.text = text
+
+        def raise_for_status(self):
+            pass
+
+    def fake_get(url, params, timeout):
+        asked.append(params["contentTypeId"])
+        return Reply(answer({"item": [palace] if params["contentTypeId"] == "76" else [museum]}))
+
+    monkeypatch.setattr(tourapi.requests, "get", fake_get)
+    found = tourapi.fetch_nearby_sights("key", 37.57, 126.98, 1500, 10)
+    assert asked == ["76", "78"]
+    assert [(s["name"], s["kind"]) for s in found] == [
+        ("National Folk Museum of Korea (국립민속박물관)", "Cultural site"),
+        ("Gyeongbokgung Palace (경복궁)", "Tourist attraction"),
+    ]
+    assert "cuisine" not in found[0] and found[0]["image_url"] == "https://example.test/m.jpg"

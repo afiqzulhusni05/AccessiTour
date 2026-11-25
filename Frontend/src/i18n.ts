@@ -164,6 +164,7 @@ const en = {
     suggest: "Suggest places in this area", suggesting: "Finding places…",
     recsTitle: "Suggestions for this area",
     recsAi: "Suggested by AI. Map positions are approximate.",
+    recsTour: "Tourist attractions and cultural sites in this area from the Korea Tourism Organization (TourAPI), nearest first.",
     recsOsm: "Well-known places in this area from OpenStreetMap. AI isn't set up on this server, so they are not tailored to the trip beyond your interests.",
     recsSample: "Places in this area couldn't be looked up right now, so these come from our sample place list. Try a smaller area or try again.",
     noRecs: "No suggestions for this area. Zoom out or move the map and try again.",
@@ -222,9 +223,9 @@ const en = {
   },
   addstop: {
     title: "Add a stop to day {{n}}", hint: "Places near this day's stops. Pick one and it's added at {{time}}, after the last stop.",
-    finding: "Finding places nearby…", failed: "Places couldn't be loaded right now (the map service may be busy). Try again.",
+    finding: "Finding places nearby…", failed: "Places couldn't be loaded right now. Try again.",
     none: "No well-known places found nearby.", wider: "Look a little further", type: "Type a place myself",
-    source: "Places from OpenStreetMap.",
+    source: "Places from the Korea Tourism Organization (TourAPI) or OpenStreetMap.",
   },
   sos: {
     button: "SOS", open: "Emergency help", title: "Emergency help",
@@ -587,6 +588,7 @@ const ko: typeof en = {
     suggest: "이 지역의 장소 추천받기", suggesting: "장소를 찾는 중…",
     recsTitle: "이 지역 추천 장소",
     recsAi: "AI가 추천한 장소예요. 지도 위치는 대략적이에요.",
+    recsTour: "한국관광공사(TourAPI)에서 찾은 이 지역의 관광지와 문화시설로, 가까운 순서예요.",
     recsOsm: "OpenStreetMap에서 찾은 이 지역의 유명 장소예요. 이 서버에는 AI가 설정되지 않아, 관심 분야 외에는 여행에 맞춰 추천되지 않아요.",
     recsSample: "지금은 이 지역의 장소를 불러올 수 없어 샘플 장소 목록에서 보여 드려요. 더 좁은 지역으로 다시 시도해 보세요.",
     noRecs: "이 지역에는 추천할 장소가 없어요. 지도를 축소하거나 이동한 뒤 다시 시도하세요.",
@@ -647,7 +649,7 @@ const ko: typeof en = {
     title: "{{n}}일차에 장소 추가", hint: "이 날 일정 근처의 장소예요. 하나를 고르면 마지막 장소 다음인 {{time}}에 추가돼요.",
     finding: "근처 장소를 찾는 중…", failed: "지금은 장소를 불러올 수 없어요(지도 서비스가 바쁠 수 있어요). 다시 시도하세요.",
     none: "근처에서 유명한 장소를 찾지 못했어요.", wider: "조금 더 넓게 찾기", type: "직접 입력하기",
-    source: "장소 정보: OpenStreetMap",
+    source: "장소 정보: 한국관광공사(TourAPI) 또는 OpenStreetMap",
   },
   sos: {
     button: "SOS", open: "긴급 도움", title: "긴급 도움",
@@ -994,6 +996,7 @@ const ms: DeepPartial<typeof en> = {
     suggest: "Cadangkan tempat di kawasan ini", suggesting: "Mencari tempat…",
     recsTitle: "Cadangan untuk kawasan ini",
     recsAi: "Dicadangkan oleh AI. Kedudukan pada peta adalah anggaran.",
+    recsTour: "Tarikan pelancong dan tapak budaya di kawasan ini daripada Pertubuhan Pelancongan Korea (TourAPI), yang terdekat dahulu.",
     recsOsm: "Tempat terkenal di kawasan ini daripada OpenStreetMap. AI belum disediakan pada pelayan ini, jadi cadangan hanya mengikut minat anda.",
     recsSample: "Tempat di kawasan ini tidak dapat dicari sekarang, jadi ini daripada senarai tempat contoh kami. Cuba kawasan lebih kecil atau cuba lagi.",
     noRecs: "Tiada cadangan untuk kawasan ini. Zum keluar atau gerakkan peta dan cuba lagi.",
@@ -1082,7 +1085,7 @@ const ms: DeepPartial<typeof en> = {
     title: "Tambah hentian ke hari {{n}}", hint: "Tempat berhampiran hentian hari ini. Pilih satu dan ia ditambah pada {{time}}, selepas hentian terakhir.",
     finding: "Mencari tempat berhampiran…", failed: "Tempat tidak dapat dimuatkan sekarang (perkhidmatan peta mungkin sibuk). Cuba lagi.",
     none: "Tiada tempat terkenal ditemui berhampiran.", wider: "Cari lebih jauh sedikit", type: "Taip tempat sendiri",
-    source: "Tempat daripada OpenStreetMap.",
+    source: "Tempat daripada Pertubuhan Pelancongan Korea (TourAPI) atau OpenStreetMap.",
   },
   sos: {
     button: "SOS", open: "Bantuan kecemasan", title: "Bantuan kecemasan",
