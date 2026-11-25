@@ -20,6 +20,11 @@ async function call<T>(method: string, path: string, token: string | null, body?
 
 // ---------- accounts
 
+/** Always answers the same, whether or not the email has an account. */
+export const forgotPassword = (email: string) => call<{ ok: boolean }>("POST", "/auth/forgot-password", null, { email });
+export const resetPassword = (token: string, newPassword: string) =>
+  call<{ ok: boolean }>("POST", "/auth/reset-password", null, { token, new_password: newPassword });
+
 export interface TeamUser { id: number; email: string; full_name: string; role: "TOURIST" | "GUIDE"; created_at: string }
 export const me = (token: string) => call<TeamUser>("GET", "/users/me", token);
 

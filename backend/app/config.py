@@ -18,5 +18,15 @@ class Settings(BaseSettings):
     # Without it, the emergency endpoint answers 503; everything else still works.
     data_go_kr_key: str | None = None
 
+    # "Forgot password" emails. Without SMTP settings the reset link is only written to the
+    # server log (fine on a laptop); set them on Render so real emails go out.
+    smtp_host: str | None = None
+    smtp_port: int = 587
+    smtp_user: str | None = None
+    smtp_password: str | None = None
+    mail_from: str | None = None  # defaults to smtp_user
+    # Where the website is, for the link in the email
+    frontend_url: str = "http://localhost:5173"
+
 
 settings = Settings()
