@@ -81,16 +81,22 @@ export default function EmergencyCardSection() {
   };
 
   return (
-    <section className="emergency-card" aria-labelledby="card-title">
-      <h2 id="card-title">{t("card.title")}</h2>
-      <p className="muted">{t("card.intro")}</p>
+    <section className="pcard sos-tone emergency-card" aria-labelledby="card-title">
+      <header>
+        <h2 id="card-title">{t("card.title")}</h2>
+        {saved && !draft && !isEmpty(saved) && (
+          <button type="button" className="pcard-edit" onClick={() => { setMsg(null); setDraft(saved); }}>{t("pcard.edit")}</button>
+        )}
+      </header>
+      <p className="muted pcard-intro">{t("card.intro")}</p>
       {!saved ? <Loading failed={failed} /> : !draft ? (
         <>
-          {isEmpty(saved) ? <p className="notice">{t("card.empty")}</p> : <CardFacts card={saved} />}
-          <p role="status">{msg?.text}</p>
-          <button type="button" className="ghost" onClick={() => { setMsg(null); setDraft(saved); }}>
-            {t(isEmpty(saved) ? "card.fill" : "card.edit")}
-          </button>
+          {isEmpty(saved) ? (
+            <button type="button" className="pcard-empty" onClick={() => { setMsg(null); setDraft(saved); }}>
+              <span aria-hidden="true">+</span>{t("card.fill")}
+            </button>
+          ) : <CardFacts card={saved} />}
+          {msg && <p role="status" className={"pcard-msg" + (msg.ok ? "" : " error")}>{msg.text}</p>}
         </>
       ) : (
         <form onSubmit={submit}>

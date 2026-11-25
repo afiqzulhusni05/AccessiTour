@@ -327,6 +327,10 @@ const en = {
     confirmDecline: "Decline the request from {{name}}?", confirmCancel: "Cancel this booking request?",
     pending: "Pending requests", total: "Bookings", acceptedTile: "Accepted bookings",
   },
+  pcard: {
+    edit: "Edit", notSet: "Not set", account: "Account", changePassword: "Change password",
+    changePasswordHint: "We'll email you a link to set a new one", verified: "Verified", guideDetails: "Guide details",
+  },
   prefs: {
     title: "Trip preferences", intro: "Saved to your account and used to start each new trip. You can still change them for one trip.",
     save: "Save preferences", saved: "Saved.", failed: "Your preferences couldn't be saved. Try again.",
@@ -751,6 +755,10 @@ const ko: typeof en = {
     confirmDecline: "{{name}}님의 요청을 거절할까요?", confirmCancel: "이 예약 요청을 취소할까요?",
     pending: "대기 중인 요청", total: "예약", acceptedTile: "수락된 예약",
   },
+  pcard: {
+    edit: "수정", notSet: "설정 안 됨", account: "계정", changePassword: "비밀번호 변경",
+    changePasswordHint: "새 비밀번호를 정할 수 있는 링크를 이메일로 보내 드려요", verified: "인증됨", guideDetails: "가이드 정보",
+  },
   prefs: {
     title: "여행 선호 설정", intro: "계정에 저장되어 새 여행을 계획할 때 기본값으로 사용돼요. 여행마다 바꿀 수도 있어요.",
     save: "선호 설정 저장", saved: "저장했어요.", failed: "저장하지 못했어요. 다시 시도하세요.",
@@ -1154,6 +1162,10 @@ const ms: DeepPartial<typeof en> = {
     requestFailed: "Permohonan tidak dapat dihantar. Cuba lagi.",
     confirmDecline: "Tolak permohonan daripada {{name}}?", confirmCancel: "Batalkan permohonan tempahan ini?",
     pending: "Permohonan menunggu", total: "Tempahan", acceptedTile: "Tempahan diterima",
+  },
+  pcard: {
+    edit: "Sunting", notSet: "Belum ditetapkan", account: "Akaun", changePassword: "Tukar kata laluan",
+    changePasswordHint: "Kami akan e-melkan pautan untuk menetapkan kata laluan baharu", verified: "Disahkan", guideDetails: "Butiran pemandu",
   },
   prefs: {
     title: "Pilihan perjalanan", intro: "Disimpan dalam akaun anda dan digunakan untuk setiap perjalanan baharu. Anda masih boleh mengubahnya untuk satu perjalanan.",

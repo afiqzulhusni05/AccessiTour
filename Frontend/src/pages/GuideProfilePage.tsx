@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import { getGuideProfile, saveGuideProfile } from "../api";
 import { useAuth } from "../AuthContext";
 import { Loading } from "../Dash";
+import { AccountCard, InfoRow, ProfileCard, ProfileHeader } from "../ProfileParts";
 import GuideFields from "../GuideFields";
 import type { GuideProfileIn } from "../types";
 import { useLoad } from "../useLoad";
@@ -32,7 +33,7 @@ export default function GuideProfilePage() {
     );
   }
   const saved = data.profile;
-  const list = (xs: string[], ns: string) => xs.map((x) => t(`${ns}.${x}`)).join(", ") || "–";
+  const tags = (xs: string[], ns: string) => xs.map((x) => t(`${ns}.${x}`));
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -53,28 +54,33 @@ export default function GuideProfilePage() {
   };
 
   return (
-    <div className="page formpage">
+    <div className="page formpage profile">
       <h1>{t("gprofile.title")}</h1>
+      <ProfileHeader user={user!} badge={data.verified ? <span className="pill ok">✓ {t("pcard.verified")}</span> : undefined} />
 
+      <ProfileCard title={t("pcard.guideDetails")} onEdit={edits || !saved ? undefined : () => { setMsg(null); setEdits(saved); }}>
       {!edits ? (
         <>
           {saved ? (
-            <dl className="facts">
-              <dt>{t("auth.nameGuide")}</dt><dd>{user!.display_name}</dd>
-              <dt>{t("auth.email")}</dt><dd>{user!.email}</dd>
-              <dt>{t("auth.gender")}</dt><dd>{t(`auth.genders.${saved.gender}`)}</dd>
-              <dt>{t("auth.cities")}</dt><dd>{list(saved.regions, "region")}</dd>
-              <dt>{t("dash.languages")}</dt><dd>{list(saved.languages, "lang")}</dd>
-              <dt>{t("dash.rate")}</dt><dd>₩{saved.daily_rate.toLocaleString()}</dd>
-              <dt>{t("dash.specialities")}</dt><dd>{list(saved.interests, "interest")}</dd>
-              <dt>{t("factor.accessibility")}</dt><dd>{list(saved.access_tags, "tag")}{data.verified && saved.access_tags.length > 0 ? " ✓" : ""}</dd>
-              <dt>{t("auth.bio")}</dt><dd>{saved.bio || "–"}</dd>
-            </dl>
-          ) : <p className="notice check">{t("gprofile.missing")}</p>}
-          <p role="status">{msg?.text}</p>
-          <button type="button" className="primary" onClick={() => { setMsg(null); setEdits(saved ?? EMPTY); }}>
-            {t(saved ? "dash.editProfile" : "gprofile.create")}
-          </button>
+            <>
+              <p className="muted pcard-intro">{t("gprofile.intro")}</p>
+              <ul className="infolist">
+                <InfoRow icon="pin" label={t("auth.cities")} tags={tags(saved.regions, "region")} />
+                <InfoRow icon="language" label={t("dash.languages")} tags={tags(saved.languages, "lang")} />
+                <InfoRow icon="money" label={t("dash.rate")} value={`₩${saved.daily_rate.toLocaleString()}`} />
+                <InfoRow icon="star" label={t("dash.specialities")} tags={tags(saved.interests, "interest")} />
+                <InfoRow icon="access" label={t("factor.accessibility")} tags={tags(saved.access_tags, "tag").map((x) => (data.verified ? `${x} ✓` : x))} />
+                <InfoRow icon="person" label={t("auth.gender")} value={t(`auth.genders.${saved.gender}`)} />
+                <InfoRow icon="note" label={t("auth.bio")} value={saved.bio ? <span className="prewrap">{saved.bio}</span> : ""} />
+              </ul>
+            </>
+          ) : (
+            <>
+              <p className="notice check">{t("gprofile.missing")}</p>
+              <button type="button" className="primary" onClick={() => { setMsg(null); setEdits(EMPTY); }}>{t("gprofile.create")}</button>
+            </>
+          )}
+          {msg && <p role="status" className={"pcard-msg" + (msg.ok ? "" : " error")}>{msg.text}</p>}
         </>
       ) : (
         <form onSubmit={submit}>
@@ -86,6 +92,8 @@ export default function GuideProfilePage() {
           </div>
         </form>
       )}
+      </ProfileCard>
+      <AccountCard />
     </div>
   );
 }

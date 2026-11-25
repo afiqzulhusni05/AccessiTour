@@ -8,6 +8,7 @@ import MultiSelect from "../MultiSelect";
 import { DIETARY, LANGS, MOBILITY } from "../options";
 import type { TripPreferences } from "../types";
 import { useLoad } from "../useLoad";
+import { AccountCard, InfoRow, ProfileCard, ProfileHeader } from "../ProfileParts";
 
 /**
  * A tourist's profile: account details plus the saved accessibility, language and food preferences that
@@ -24,7 +25,7 @@ export default function PreferencesPage() {
   if (!saved) return <div className="page"><h1>{t("nav.profile")}</h1><Loading failed={failed} /></div>;
   const p = draft ?? saved;
   const set = (changes: Partial<TripPreferences>) => { setMsg(null); setDraft({ ...p, ...changes }); };
-  const list = (xs: string[], ns: string) => xs.map((x) => t(`${ns}.${x}`)).join(", ") || "–";
+  const tags = (xs: string[], ns: string) => xs.map((x) => t(`${ns}.${x}`));
 
   const submit = async (e: FormEvent) => {
     e.preventDefault();
@@ -41,28 +42,23 @@ export default function PreferencesPage() {
     }
   };
 
-
+  const edit = () => { setMsg(null); setDraft(saved); };
   return (
-    <div className="page formpage">
+    <div className="page formpage profile">
       <h1>{t("nav.profile")}</h1>
-      {(
-        <dl className="facts">
-          <dt>{t("auth.name")}</dt><dd>{user.display_name}</dd>
-          <dt>{t("auth.email")}</dt><dd>{user.email}</dd>
-        </dl>
-      )}
-      <h2>{t("prefs.title")}</h2>
+      <ProfileHeader user={user} />
 
+      <ProfileCard title={t("prefs.title")} onEdit={draft ? undefined : edit}>
       {!draft ? (
         <>
-          <dl className="facts">
-            <dt>{t("needs.mobility")}</dt><dd>{(t(`mobility.${p.mobility}`) as unknown as string[])[0]}</dd>
-            <dt>{t("trip.language")}</dt><dd>{list(p.languages, "lang")}</dd>
-            <dt>{t("needs.dietary")}</dt><dd>{list(p.dietary, "diet")}</dd>
-            <dt>{t("card.genderPref")}</dt><dd>{t(`card.gender.${p.gender_preference ?? "any"}`)}</dd>
-          </dl>
-          <p role="status">{msg?.text}</p>
-          <button type="button" className="primary" onClick={() => { setMsg(null); setDraft(saved); }}>{t("dash.editProfile")}</button>
+          <p className="muted pcard-intro">{t("prefs.intro")}</p>
+          <ul className="infolist">
+            <InfoRow icon="mobility" label={t("needs.mobility")} value={(t(`mobility.${p.mobility}`) as unknown as string[])[0]} />
+            <InfoRow icon="language" label={t("trip.language")} tags={tags(p.languages, "lang")} />
+            <InfoRow icon="food" label={t("needs.dietary")} tags={tags(p.dietary, "diet")} />
+            <InfoRow icon="person" label={t("card.genderPref")} value={t(`card.gender.${p.gender_preference ?? "any"}`)} />
+          </ul>
+          {msg && <p role="status" className={"pcard-msg" + (msg.ok ? "" : " error")}>{msg.text}</p>}
         </>
       ) : (
       <form onSubmit={submit}>
@@ -97,7 +93,10 @@ export default function PreferencesPage() {
       </form>
       )}
 
+      </ProfileCard>
+
       <EmergencyCardSection />
+      <AccountCard />
     </div>
   );
 }
