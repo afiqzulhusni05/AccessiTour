@@ -736,3 +736,70 @@ input[type="date"], input[type="time"] { min-width: 0; max-width: 100%; display:
   .calgrid { gap: 3px; }
   .calday { min-height: 3rem; border-radius: 8px; }
 }
+
+/* ==== One look for the whole app, matching My profile: white rounded cards, soft borders, pill tags ==== */
+:root { --card-radius: 14px; --card-line: var(--mist); }
+/* every section on a page is a card (the landing page and SOS dialog are not inside .page) */
+.page section {
+  margin: 1rem 0 0; padding: 1rem 1.1rem 1.1rem; background: #fff;
+  border: 2px solid var(--card-line); border-radius: var(--card-radius);
+}
+.page section > h2:first-child, .page section > header:first-child h2, .page section > .dayhead h2,
+.page section > h1:first-child { margin-top: 0; }
+.page section h2 { font-size: 1.15rem; }
+.page section section { border-radius: 10px; } /* a card inside a card stays lighter */
+/* cards that already had their own frame keep it, just rounded the same */
+.page section.panel, .tile, .page section.pcard, .page section.phead, .page section.calcard, .page section.calpanel,
+.bookings > li, .pay-summary, .share, .stopform, .mealpicker, .page section.pay-summary { border-radius: var(--card-radius); }
+.tile { border-color: var(--card-line); }
+
+/* lists of trips, guides and bookings: each item is its own card */
+.triplist { display: grid; gap: .75rem; }
+.triplist li { padding: 1rem 1.1rem; background: #fff; border: 2px solid var(--card-line); border-radius: var(--card-radius); }
+.triplist li:hover { border-color: #b9c6d4; }
+/* …except inside a card, where rows are separated by a thin line */
+.panel .triplist, .page section .triplist { gap: 0; }
+.panel .triplist li, .page section .triplist li { padding: .8rem 0; border: 0; border-top: 1px solid var(--card-line); border-radius: 0; background: none; }
+.panel .triplist li:first-child, .page section .triplist li:first-child { border-top: 0; }
+.guides { display: grid; gap: .75rem; }
+.guides > li { padding: 1rem 1.1rem; background: #fff; border: 2px solid var(--card-line); border-radius: var(--card-radius); }
+.guides > li:hover { border-color: #b9c6d4; }
+
+/* tags, states and badges are pills, like the profile tags */
+.tags li, .badges span, .state { border-radius: 999px; padding: .12rem .65rem; }
+.tags li { background: #f4f8fb; border: 1px solid #c9d6e3; font-weight: 600; }
+.state { font-size: .8rem; font-weight: 650; }
+
+/* softer notices and inner boxes */
+.notice { border-radius: 10px; }
+.recs li { border-radius: 12px; }
+.stopform, .mealpicker, .share { border-color: var(--card-line); }
+
+/* facts lists inside cards read like the profile rows */
+.page section .facts { gap: .55rem 1.5rem; }
+.page section .facts dt { font-size: .92rem; }
+
+/* page titles a touch tighter, cards start right under them */
+.page > h1 { margin-bottom: .25rem; }
+.approval { margin-top: 1rem; padding: 1rem 1.1rem 1.1rem; background: #fff; border: 2px solid var(--ink); border-radius: var(--card-radius); }
+.approval h2 { margin-top: 0; font-size: 1.15rem; }
+.kinds label { border-radius: 999px; }
+.page section .triplist { margin-top: .25rem; }
+/* "Delete trip" in a list row: a quiet red text button, like Sign out on the profile */
+.triplist .ghost.small.danger { position: relative; z-index: 1; min-height: 36px; padding: 0; border: 0; background: none; text-decoration: underline; text-underline-offset: 3px; font-weight: 600; }
+.page section.tripprogress { border-radius: var(--card-radius); border-color: var(--card-line); }
+.tripprogress dl { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .5rem; margin: .75rem 0 .5rem; }
+.tripprogress dl > div { padding: .55rem .6rem; background: #f4f8fb; border-radius: 10px; }
+.tripprogress dt { font-size: .8rem; line-height: 1.25; }
+.tripmap { border-radius: 12px; border-color: #b9c6d4; overflow: hidden; }
+/* the trip-planning form sits in one card, like the profile cards */
+.formcard { padding: 1.1rem 1.1rem 1.25rem; background: #fff; border: 2px solid var(--card-line); border-radius: var(--card-radius); }
+.formcard > fieldset:last-child, .formcard > :last-child { margin-bottom: 0; }
+.formcard h1 { font-size: 1.35rem; margin-top: 0; }
+.steps { margin-bottom: 1rem; }
+.steps li { border-top-width: 5px; border-radius: 3px 3px 0 0; }
+@media (max-width: 30rem) { .formcard { padding: .9rem .85rem 1rem; } }
+.triplist + .triplist { margin-top: 0; } .panel .triplist + .triplist li:first-child, .page section .triplist + .triplist li:first-child { border-top: 1px solid var(--card-line); }
+/* sign in, sign up and password pages: the form is a card too */
+.authcard > form { padding: 1.1rem 1.1rem 1.25rem; background: #fff; border: 2px solid var(--card-line); border-radius: var(--card-radius); }
+.authcard.signup { max-width: 40rem; }

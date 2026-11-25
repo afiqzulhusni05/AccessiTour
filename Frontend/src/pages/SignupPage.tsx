@@ -43,7 +43,7 @@ export default function SignupPage() {
   };
 
   return (
-    <div className="page">
+    <div className="page authcard signup">
       <h1>{t("auth.signUp")}</h1>
       <form onSubmit={submit}>
         <fieldset>

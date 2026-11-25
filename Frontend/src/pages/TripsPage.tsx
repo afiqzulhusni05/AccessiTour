@@ -68,7 +68,6 @@ export default function TripsPage() {
               </li>
             ))}
           </ul>
-          {trips && trips.length > 0 && <h2>{t("teamtrip.itineraries")}</h2>}
         </section>
       )}
       {trips?.length === 0 && teamTrips.length === 0 && (
@@ -78,7 +77,12 @@ export default function TripsPage() {
         </>
       )}
       {(state === "final" || state === "waiting") && <FilterNote label={t(state === "final" ? "dash.final" : "dash.waitingForYou")} all="/trips" />}
-      {shown && trips!.length > 0 && (shown.length === 0 ? <p>{t("dash.noMatches")}</p> : <TripList trips={shown} viewer={user.role} />)}
+      {shown && trips!.length > 0 && (
+        <section>
+          <h2>{t("teamtrip.itineraries")}</h2>
+          {shown.length === 0 ? <p>{t("dash.noMatches")}</p> : <TripList trips={shown} viewer={user.role} />}
+        </section>
+      )}
     </div>
   );
 }

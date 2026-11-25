@@ -142,175 +142,177 @@ export default function ProfilePage() {
         ))}
       </ol>
 
-      {step === 0 && (
-        <fieldset>
-          <legend>{t("trip.title")}</legend>
-          <div className="row">
-            <label>{t("trip.start")}
-              <input type="date" value={p.start_date} min={inDays(0)} onChange={(e) => set("start_date", e.target.value)} />
-            </label>
-            <label>{t("trip.end")}
-              <input type="date" value={p.end_date} min={p.start_date || inDays(0)} onChange={(e) => set("end_date", e.target.value)} />
-            </label>
-          </div>
+      <div className="formcard">
+        {step === 0 && (
+          <fieldset>
+            <legend>{t("trip.title")}</legend>
+            <div className="row">
+              <label>{t("trip.start")}
+                <input type="date" value={p.start_date} min={inDays(0)} onChange={(e) => set("start_date", e.target.value)} />
+              </label>
+              <label>{t("trip.end")}
+                <input type="date" value={p.end_date} min={p.start_date || inDays(0)} onChange={(e) => set("end_date", e.target.value)} />
+              </label>
+            </div>
 
-          <div className="field">
-            <span id="cities-label">{t("multi.cities")}</span>
-            <ol className={"legs" + (multi ? "" : " single")} aria-labelledby="cities-label">
-              {legs.map((leg, i) => (
-                <li key={i}>
-                  <div className="leghead">
-                    {multi && <span className="legno" aria-hidden="true">{i + 1}</span>}
-                    <select value={leg.region} aria-label={multi ? t("multi.cityN", { n: i + 1 }) : t("trip.region")} onChange={(e) => setLeg(i, { region: e.target.value })}>
-                      {PROVINCES.filter((prov) => prov.cities.some((c) => cities.includes(c))).map((prov) => (
-                        <optgroup key={prov.en} label={i18n.language === "ko" ? prov.ko : prov.en}>
-                          {prov.cities.filter((c) => cities.includes(c) && (c.id === leg.region || !legs.some((x) => x.region === c.id)))
-                            .map((c) => <option key={c.id} value={c.id}>{t(`region.${c.id}`)}</option>)}
-                        </optgroup>
-                      ))}
-                    </select>
-                    {multi && stayDays(leg) > 0 && <span className="muted">{t("guide.days", { count: stayDays(leg) })}</span>}
-                    {multi && (
-                      <span className="legbtns">
-                        <button type="button" className="ghost iconbtn" disabled={i === 0} onClick={() => setLegs(moveLeg(legs, i, -1))}
-                          aria-label={t("multi.earlier", { city: t(`region.${leg.region}`) })} title={t("multi.earlier", { city: t(`region.${leg.region}`) })}>↑</button>
-                        <button type="button" className="ghost iconbtn" disabled={i === legs.length - 1} onClick={() => setLegs(moveLeg(legs, i, 1))}
-                          aria-label={t("multi.later", { city: t(`region.${leg.region}`) })} title={t("multi.later", { city: t(`region.${leg.region}`) })}>↓</button>
-                        <button type="button" className="ghost iconbtn" onClick={() => { setErr(""); setLegs(legs.filter((_, n) => n !== i)); }}
-                          aria-label={t("multi.remove", { city: t(`region.${leg.region}`) })} title={t("multi.remove", { city: t(`region.${leg.region}`) })}>×</button>
-                      </span>
-                    )}
-                  </div>
-                  {multi && (
-                    <div className="row">
-                      <label>{t("multi.arrive")}
-                        <input type="date" value={leg.start_date} min={p.start_date || inDays(0)} max={p.end_date || undefined} onChange={(e) => setLeg(i, { start_date: e.target.value })} />
-                      </label>
-                      <label>{t("multi.leave")}
-                        <input type="date" value={leg.end_date} min={leg.start_date || p.start_date || inDays(0)} max={p.end_date || undefined} onChange={(e) => setLeg(i, { end_date: e.target.value })} />
-                      </label>
+            <div className="field">
+              <span id="cities-label">{t("multi.cities")}</span>
+              <ol className={"legs" + (multi ? "" : " single")} aria-labelledby="cities-label">
+                {legs.map((leg, i) => (
+                  <li key={i}>
+                    <div className="leghead">
+                      {multi && <span className="legno" aria-hidden="true">{i + 1}</span>}
+                      <select value={leg.region} aria-label={multi ? t("multi.cityN", { n: i + 1 }) : t("trip.region")} onChange={(e) => setLeg(i, { region: e.target.value })}>
+                        {PROVINCES.filter((prov) => prov.cities.some((c) => cities.includes(c))).map((prov) => (
+                          <optgroup key={prov.en} label={i18n.language === "ko" ? prov.ko : prov.en}>
+                            {prov.cities.filter((c) => cities.includes(c) && (c.id === leg.region || !legs.some((x) => x.region === c.id)))
+                              .map((c) => <option key={c.id} value={c.id}>{t(`region.${c.id}`)}</option>)}
+                          </optgroup>
+                        ))}
+                      </select>
+                      {multi && stayDays(leg) > 0 && <span className="muted">{t("guide.days", { count: stayDays(leg) })}</span>}
+                      {multi && (
+                        <span className="legbtns">
+                          <button type="button" className="ghost iconbtn" disabled={i === 0} onClick={() => setLegs(moveLeg(legs, i, -1))}
+                            aria-label={t("multi.earlier", { city: t(`region.${leg.region}`) })} title={t("multi.earlier", { city: t(`region.${leg.region}`) })}>↑</button>
+                          <button type="button" className="ghost iconbtn" disabled={i === legs.length - 1} onClick={() => setLegs(moveLeg(legs, i, 1))}
+                            aria-label={t("multi.later", { city: t(`region.${leg.region}`) })} title={t("multi.later", { city: t(`region.${leg.region}`) })}>↓</button>
+                          <button type="button" className="ghost iconbtn" onClick={() => { setErr(""); setLegs(legs.filter((_, n) => n !== i)); }}
+                            aria-label={t("multi.remove", { city: t(`region.${leg.region}`) })} title={t("multi.remove", { city: t(`region.${leg.region}`) })}>×</button>
+                        </span>
+                      )}
                     </div>
-                  )}
-                </li>
-              ))}
-            </ol>
-            {legs.length < MAX_LEGS && !adding && (
-              <div><button type="button" className="textlink" onClick={() => setAdding(true)}>+ {t("multi.addAnother")}</button></div>
-            )}
-            {legs.length < MAX_LEGS && adding && (
-              <div className="cityadd">
-                <label>{t("multi.addAnother")}
-                  <input
-                    autoFocus type="text" list="city-names" value={cityText} placeholder={t("multi.typeCity")}
-                    onChange={(e) => setCityText(e.target.value)}
-                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCity(); } }}
-                  />
-                </label>
-                <datalist id="city-names">
-                  {cities.filter((c) => !legs.some((leg) => leg.region === c.id)).map((c) => <option key={c.id} value={t(`region.${c.id}`)} />)}
-                </datalist>
-                <button type="button" className="primary" onClick={addCity} disabled={!cityText.trim()}>{t("multi.add")}</button>
-                <button type="button" className="ghost" onClick={() => { setAdding(false); setCityText(""); setErr(""); }}>{t("collab.cancel")}</button>
-              </div>
-            )}
-          </div>
-
-          <fieldset>
-            <legend className="fieldlabel">{t("hours.label")}</legend>
-            <div className="chips" role="radiogroup" aria-label={t("hours.label")}>
-              <label className="chip">
-                <input type="radio" name="guide-service" checked={service.kind === "FULL_DAY"} onChange={() => setService({ kind: "FULL_DAY" })} />
-                <span>{t("hours.fullDay")}</span>
-              </label>
-              <label className="chip">
-                <input type="radio" name="guide-service" checked={service.kind === "MICRO"}
-                  onChange={() => setService({ kind: "MICRO", start: "10:00", end: "14:00" })} />
-                <span>{t("hours.fewHours")}</span>
-              </label>
-            </div>
-            {service.kind === "MICRO" && (
-              <>
-                <div className="row hours-row">
-                  <label>{t("hours.from")}
-                    <input type="time" step={1800} required value={service.start} onChange={(e) => setService({ ...service, start: e.target.value })} />
+                    {multi && (
+                      <div className="row">
+                        <label>{t("multi.arrive")}
+                          <input type="date" value={leg.start_date} min={p.start_date || inDays(0)} max={p.end_date || undefined} onChange={(e) => setLeg(i, { start_date: e.target.value })} />
+                        </label>
+                        <label>{t("multi.leave")}
+                          <input type="date" value={leg.end_date} min={leg.start_date || p.start_date || inDays(0)} max={p.end_date || undefined} onChange={(e) => setLeg(i, { end_date: e.target.value })} />
+                        </label>
+                      </div>
+                    )}
+                  </li>
+                ))}
+              </ol>
+              {legs.length < MAX_LEGS && !adding && (
+                <div><button type="button" className="textlink" onClick={() => setAdding(true)}>+ {t("multi.addAnother")}</button></div>
+              )}
+              {legs.length < MAX_LEGS && adding && (
+                <div className="cityadd">
+                  <label>{t("multi.addAnother")}
+                    <input
+                      autoFocus type="text" list="city-names" value={cityText} placeholder={t("multi.typeCity")}
+                      onChange={(e) => setCityText(e.target.value)}
+                      onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); addCity(); } }}
+                    />
                   </label>
-                  <label>{t("hours.until")}
-                    <input type="time" step={1800} required value={service.end} onChange={(e) => setService({ ...service, end: e.target.value })} />
-                  </label>
+                  <datalist id="city-names">
+                    {cities.filter((c) => !legs.some((leg) => leg.region === c.id)).map((c) => <option key={c.id} value={t(`region.${c.id}`)} />)}
+                  </datalist>
+                  <button type="button" className="primary" onClick={addCity} disabled={!cityText.trim()}>{t("multi.add")}</button>
+                  <button type="button" className="ghost" onClick={() => { setAdding(false); setCityText(""); setErr(""); }}>{t("collab.cancel")}</button>
                 </div>
-                <small className="muted">{t("hours.hint")}</small>
-              </>
-            )}
-          </fieldset>
+              )}
+            </div>
 
-          <div className="row">
-            <label>{t("trip.party")}
-              <NumberInput min={1} max={50} value={p.party_size} onChange={(n) => set("party_size", Math.round(n))} />
-            </label>
-            <label>{t("trip.budget")}
-              <NumberInput min={10000} step={10000} value={p.budget_per_day} onChange={(n) => set("budget_per_day", n)} />
-            </label>
-          </div>
-        </fieldset>
-      )}
-      {step === 0 && (
-        <MultiSelect
-          label={t("trip.language")} options={LANGS} value={p.languages}
-          onChange={(v) => set("languages", v)} optionLabel={(l) => t(`lang.${l}`)}
-        />
-      )}
-
-      {step === 1 && (
-        <>
-          <fieldset>
-            <legend>{t("needs.mobility")}</legend>
-            <div className="optgrid">
-            {MOBILITY.map((m) => {
-              const [name, desc] = t(`mobility.${m}`) as unknown as string[];
-              return (
-                <label key={m} className={"option" + (p.mobility === m ? " picked" : "")}>
-                  <input type="radio" name="mobility" checked={p.mobility === m} onChange={() => set("mobility", m)} />
-                  <span><strong>{name}</strong><small>{desc}</small></span>
+            <fieldset>
+              <legend className="fieldlabel">{t("hours.label")}</legend>
+              <div className="chips" role="radiogroup" aria-label={t("hours.label")}>
+                <label className="chip">
+                  <input type="radio" name="guide-service" checked={service.kind === "FULL_DAY"} onChange={() => setService({ kind: "FULL_DAY" })} />
+                  <span>{t("hours.fullDay")}</span>
                 </label>
-              );
-            })}
+                <label className="chip">
+                  <input type="radio" name="guide-service" checked={service.kind === "MICRO"}
+                    onChange={() => setService({ kind: "MICRO", start: "10:00", end: "14:00" })} />
+                  <span>{t("hours.fewHours")}</span>
+                </label>
+              </div>
+              {service.kind === "MICRO" && (
+                <>
+                  <div className="row hours-row">
+                    <label>{t("hours.from")}
+                      <input type="time" step={1800} required value={service.start} onChange={(e) => setService({ ...service, start: e.target.value })} />
+                    </label>
+                    <label>{t("hours.until")}
+                      <input type="time" step={1800} required value={service.end} onChange={(e) => setService({ ...service, end: e.target.value })} />
+                    </label>
+                  </div>
+                  <small className="muted">{t("hours.hint")}</small>
+                </>
+              )}
+            </fieldset>
+
+            <div className="row">
+              <label>{t("trip.party")}
+                <NumberInput min={1} max={50} value={p.party_size} onChange={(n) => set("party_size", Math.round(n))} />
+              </label>
+              <label>{t("trip.budget")}
+                <NumberInput min={10000} step={10000} value={p.budget_per_day} onChange={(n) => set("budget_per_day", n)} />
+              </label>
             </div>
           </fieldset>
+        )}
+        {step === 0 && (
           <MultiSelect
-            label={t("needs.interests")} options={GUIDE_INTERESTS} value={p.interests}
-            onChange={(v) => set("interests", v)} optionLabel={(i) => t(`interest.${i}`)}
+            label={t("trip.language")} options={LANGS} value={p.languages}
+            onChange={(v) => set("languages", v)} optionLabel={(l) => t(`lang.${l}`)}
           />
-          <MultiSelect
-            label={t("needs.dietary")} options={DIETARY} value={p.dietary}
-            onChange={(v) => set("dietary", v)} optionLabel={(d) => t(`diet.${d}`)}
-          />
-          <GenderPicker value={gender} onChange={(g) => { touched.current = true; setGender(g); }} />
-        </>
-      )}
+        )}
 
-      {step === 2 && (
-        <section>
-          <h1>{t("review.title")}</h1>
-          <dl className="facts">
-            <dt>{t("multi.cities")}</dt>
-            <dd>
-              {multi
-                ? <ol className="plain">{legs.map((leg) => <li key={leg.region}>{t(`region.${leg.region}`)}: {leg.start_date} → {leg.end_date} ({t("guide.days", { count: stayDays(leg) })})</li>)}</ol>
-                : t(`region.${legs[0].region}`)}
-            </dd>
-            <dt>{t("trip.start")}</dt><dd>{p.start_date} → {p.end_date}</dd>
-            <dt>{t("hours.label")}</dt>
-            <dd>{service.kind === "FULL_DAY" ? t("hours.fullDay") : t("hours.someHours", { start: service.start, end: service.end })}</dd>
-            <dt>{t("trip.party")}</dt><dd>{p.party_size}</dd>
-            <dt>{t("trip.budget")}</dt><dd>₩{p.budget_per_day.toLocaleString()}</dd>
-            <dt>{t("trip.language")}</dt><dd>{p.languages.map((l) => t(`lang.${l}`)).join(", ")}</dd>
-            <dt>{t("needs.mobility")}</dt><dd>{(t(`mobility.${p.mobility}`) as unknown as string[])[0]}</dd>
-            <dt>{t("needs.interests")}</dt><dd>{p.interests.map((i) => t(`interest.${i}`)).join(", ") || "–"}</dd>
-            <dt>{t("needs.dietary")}</dt><dd>{p.dietary.map((d) => t(`diet.${d}`)).join(", ") || "–"}</dd>
-            <dt>{t("card.genderPref")}</dt><dd>{t(`card.gender.${gender}`)}</dd>
-          </dl>
-        </section>
-      )}
+        {step === 1 && (
+          <>
+            <fieldset>
+              <legend>{t("needs.mobility")}</legend>
+              <div className="optgrid">
+              {MOBILITY.map((m) => {
+                const [name, desc] = t(`mobility.${m}`) as unknown as string[];
+                return (
+                  <label key={m} className={"option" + (p.mobility === m ? " picked" : "")}>
+                    <input type="radio" name="mobility" checked={p.mobility === m} onChange={() => set("mobility", m)} />
+                    <span><strong>{name}</strong><small>{desc}</small></span>
+                  </label>
+                );
+              })}
+              </div>
+            </fieldset>
+            <MultiSelect
+              label={t("needs.interests")} options={GUIDE_INTERESTS} value={p.interests}
+              onChange={(v) => set("interests", v)} optionLabel={(i) => t(`interest.${i}`)}
+            />
+            <MultiSelect
+              label={t("needs.dietary")} options={DIETARY} value={p.dietary}
+              onChange={(v) => set("dietary", v)} optionLabel={(d) => t(`diet.${d}`)}
+            />
+            <GenderPicker value={gender} onChange={(g) => { touched.current = true; setGender(g); }} />
+          </>
+        )}
+
+        {step === 2 && (
+          <div>
+            <h1>{t("review.title")}</h1>
+            <dl className="facts">
+              <dt>{t("multi.cities")}</dt>
+              <dd>
+                {multi
+                  ? <ol className="plain">{legs.map((leg) => <li key={leg.region}>{t(`region.${leg.region}`)}: {leg.start_date} → {leg.end_date} ({t("guide.days", { count: stayDays(leg) })})</li>)}</ol>
+                  : t(`region.${legs[0].region}`)}
+              </dd>
+              <dt>{t("trip.start")}</dt><dd>{p.start_date} → {p.end_date}</dd>
+              <dt>{t("hours.label")}</dt>
+              <dd>{service.kind === "FULL_DAY" ? t("hours.fullDay") : t("hours.someHours", { start: service.start, end: service.end })}</dd>
+              <dt>{t("trip.party")}</dt><dd>{p.party_size}</dd>
+              <dt>{t("trip.budget")}</dt><dd>₩{p.budget_per_day.toLocaleString()}</dd>
+              <dt>{t("trip.language")}</dt><dd>{p.languages.map((l) => t(`lang.${l}`)).join(", ")}</dd>
+              <dt>{t("needs.mobility")}</dt><dd>{(t(`mobility.${p.mobility}`) as unknown as string[])[0]}</dd>
+              <dt>{t("needs.interests")}</dt><dd>{p.interests.map((i) => t(`interest.${i}`)).join(", ") || "–"}</dd>
+              <dt>{t("needs.dietary")}</dt><dd>{p.dietary.map((d) => t(`diet.${d}`)).join(", ") || "–"}</dd>
+              <dt>{t("card.genderPref")}</dt><dd>{t(`card.gender.${gender}`)}</dd>
+            </dl>
+          </div>
+        )}
+      </div>
 
       {err && <p role="alert" className="error">{err}</p>}
       <div className="actions">
