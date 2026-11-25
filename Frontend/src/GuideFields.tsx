@@ -1,6 +1,7 @@
 import { useTranslation } from "react-i18next";
 import { ACCESS_TAGS, GUIDE_INTERESTS, GUIDE_REGIONS, LANGS, toggle } from "./options";
 import MultiSelect from "./MultiSelect";
+import NumberInput from "./NumberInput";
 import type { GuideProfileIn } from "./types";
 
 /** The guide profile form fields, shared by sign-up and "My profile". They follow the team API's guide profile. */
@@ -41,7 +42,7 @@ export default function GuideFields({ value: g, onChange: setG, local = false }:
             </div>
           )}
           <label>{t("auth.rate")}
-            <input type="number" required min={0} step={5000} value={g.daily_rate} onChange={(e) => setG({ ...g, daily_rate: +e.target.value })} />
+            <NumberInput required min={0} step={5000} value={g.daily_rate} onChange={(n) => setG({ ...g, daily_rate: n })} />
           </label>
         </div>
       </fieldset>

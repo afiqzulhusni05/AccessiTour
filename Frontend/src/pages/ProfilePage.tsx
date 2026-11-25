@@ -8,6 +8,7 @@ import { GenderPicker } from "../EmergencyCard";
 import MultiSelect from "../MultiSelect";
 import { CITIES, PROVINCES } from "../regions";
 import { DIETARY, GUIDE_INTERESTS, LANGS, MOBILITY } from "../options";
+import NumberInput from "../NumberInput";
 import type { GenderPreference, TouristProfile, TripLeg } from "../types";
 
 
@@ -244,10 +245,10 @@ export default function ProfilePage() {
 
           <div className="row">
             <label>{t("trip.party")}
-              <input type="number" min={1} value={p.party_size} onChange={(e) => set("party_size", Math.max(1, +e.target.value))} />
+              <NumberInput min={1} max={50} value={p.party_size} onChange={(n) => set("party_size", Math.round(n))} />
             </label>
             <label>{t("trip.budget")}
-              <input type="number" min={10000} step={10000} value={p.budget_per_day} onChange={(e) => set("budget_per_day", +e.target.value)} />
+              <NumberInput min={10000} step={10000} value={p.budget_per_day} onChange={(n) => set("budget_per_day", n)} />
             </label>
           </div>
         </fieldset>
