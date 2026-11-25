@@ -3,12 +3,13 @@ import { useTranslation } from "react-i18next";
 import { addComment, addStop, ApiError, approveItinerary, requestAiDraft, deleteStop, getItinerary, sendMessage, setStopProgress, updateStop } from "./api";
 import Chat from "./Chat";
 import MealPicker from "./MealPicker";
+import StopPicker from "./StopPicker";
 import { useLocalized } from "./names";
-import { Stop, StopForm } from "./Stop";
+import { Stop } from "./Stop";
 import { NavNote } from "./StopNav";
 import TripMap from "./TripMap";
 import TripProgress from "./TripProgress";
-import { nextFreeTime, STATES } from "./progress";
+import { STATES } from "./progress";
 import type { Itinerary, ItineraryItem, Meal, Progress, Role } from "./types";
 
 const ROLES: Role[] = ["tourist", "guide"];
@@ -180,10 +181,9 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
               ))}
             </ol>
             {editable && addingTo === day && (
-              <StopForm
-                initial={{ day_number: day, start_time: nextFreeTime(items), place_name: "", activity: "" }}
-                days={it.days} submitLabel={t("collab.addSave")} busy={busy} fixedSlot
-                onSubmit={async (f) => (await run(() => addStop(it, f))) && setAddingTo(null)}
+              <StopPicker
+                itinerary={it} day={day} busy={busy}
+                onAdd={async (f) => (await run(() => addStop(it, f))) && setAddingTo(null)}
                 onCancel={() => setAddingTo(null)}
               />
             )}

@@ -220,6 +220,12 @@ const en = {
     notYet: "You can pay once the guide has accepted the booking.", notFound: "This booking doesn't exist, or it isn't yours.",
     failed: "The payment couldn't be recorded. Try again.", payNow: "Pay now", paid: "Paid",
   },
+  addstop: {
+    title: "Add a stop to day {{n}}", hint: "Places near this day's stops. Pick one and it's added at {{time}}, after the last stop.",
+    finding: "Finding places nearby…", failed: "Places couldn't be loaded right now (the map service may be busy). Try again.",
+    none: "No well-known places found nearby.", wider: "Look a little further", type: "Type a place myself",
+    source: "Places from OpenStreetMap.",
+  },
   sos: {
     button: "SOS", open: "Emergency help", title: "Emergency help",
     intro: "Call first. These numbers are free from any phone in Korea.",
@@ -636,6 +642,12 @@ const ko: typeof en = {
     button: "₩{{amount}} 결제 (데모)", paying: "결제하는 중…", paidOn: "{{date}}에 결제됨 (데모).",
     notYet: "가이드가 예약을 수락하면 결제할 수 있어요.", notFound: "예약이 없거나 내 예약이 아니에요.",
     failed: "결제를 기록하지 못했어요. 다시 시도하세요.", payNow: "결제하기", paid: "결제 완료",
+  },
+  addstop: {
+    title: "{{n}}일차에 장소 추가", hint: "이 날 일정 근처의 장소예요. 하나를 고르면 마지막 장소 다음인 {{time}}에 추가돼요.",
+    finding: "근처 장소를 찾는 중…", failed: "지금은 장소를 불러올 수 없어요(지도 서비스가 바쁠 수 있어요). 다시 시도하세요.",
+    none: "근처에서 유명한 장소를 찾지 못했어요.", wider: "조금 더 넓게 찾기", type: "직접 입력하기",
+    source: "장소 정보: OpenStreetMap",
   },
   sos: {
     button: "SOS", open: "긴급 도움", title: "긴급 도움",
@@ -1065,6 +1077,12 @@ const ms: DeepPartial<typeof en> = {
     button: "Bayar ₩{{amount}} (demo)", paying: "Membayar…", paidOn: "Dibayar pada {{date}} (demo).",
     notYet: "Anda boleh membayar selepas pemandu menerima tempahan.", notFound: "Tempahan ini tiada, atau bukan milik anda.",
     failed: "Bayaran tidak dapat direkodkan. Cuba lagi.", payNow: "Bayar sekarang", paid: "Dibayar",
+  },
+  addstop: {
+    title: "Tambah hentian ke hari {{n}}", hint: "Tempat berhampiran hentian hari ini. Pilih satu dan ia ditambah pada {{time}}, selepas hentian terakhir.",
+    finding: "Mencari tempat berhampiran…", failed: "Tempat tidak dapat dimuatkan sekarang (perkhidmatan peta mungkin sibuk). Cuba lagi.",
+    none: "Tiada tempat terkenal ditemui berhampiran.", wider: "Cari lebih jauh sedikit", type: "Taip tempat sendiri",
+    source: "Tempat daripada OpenStreetMap.",
   },
   sos: {
     button: "SOS", open: "Bantuan kecemasan", title: "Bantuan kecemasan",
