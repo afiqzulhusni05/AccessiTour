@@ -331,6 +331,16 @@ const en = {
     edit: "Edit", notSet: "Not set", account: "Account", changePassword: "Change password",
     changePasswordHint: "We'll email you a link to set a new one", verified: "Verified", guideDetails: "Guide details",
   },
+  cal: {
+    intro: "Travellers can only book you on free days. A full-day booking needs at least {{hours}} free hours.",
+    prev: "Previous month", next: "Next month", free: "Free", short: "Free, short hours", booked: "Booked", off: "Not free", past: "Past",
+    countFree_one: "{{count}} free day", countFree_other: "{{count}} free days",
+    countBooked_one: "{{count}} booked", countBooked_other: "{{count}} booked",
+    tapHint: "Tap days to select them, then mark them free or not free.", selectRest: "Select all remaining days this month",
+    selected_one: "{{count}} day selected", selected_other: "{{count}} days selected", clear: "Clear",
+    now: "Now", saving: "Saving…", markFree: "Mark free", markOff: "Mark not free",
+    bookedNote: "Some of these days are already booked. Marking them not free doesn't cancel the booking.",
+  },
   prefs: {
     title: "Trip preferences", intro: "Saved to your account and used to start each new trip. You can still change them for one trip.",
     save: "Save preferences", saved: "Saved.", failed: "Your preferences couldn't be saved. Try again.",
@@ -759,6 +769,15 @@ const ko: typeof en = {
     edit: "수정", notSet: "설정 안 됨", account: "계정", changePassword: "비밀번호 변경",
     changePasswordHint: "새 비밀번호를 정할 수 있는 링크를 이메일로 보내 드려요", verified: "인증됨", guideDetails: "가이드 정보",
   },
+  cal: {
+    intro: "여행자는 근무 가능한 날에만 예약할 수 있어요. 하루 종일 예약은 {{hours}}시간 이상 비어 있어야 해요.",
+    prev: "이전 달", next: "다음 달", free: "가능", short: "가능 (짧은 시간)", booked: "예약됨", off: "불가", past: "지난 날",
+    countFree_one: "가능한 날 {{count}}일", countFree_other: "가능한 날 {{count}}일", countBooked_one: "예약 {{count}}일", countBooked_other: "예약 {{count}}일",
+    tapHint: "날짜를 눌러 선택한 뒤 가능 또는 불가로 표시하세요.", selectRest: "이번 달 남은 날 모두 선택",
+    selected_one: "{{count}}일 선택됨", selected_other: "{{count}}일 선택됨", clear: "선택 해제",
+    now: "현재", saving: "저장 중…", markFree: "가능으로 표시", markOff: "불가로 표시",
+    bookedNote: "이미 예약된 날이 있어요. 불가로 표시해도 예약은 취소되지 않아요.",
+  },
   prefs: {
     title: "여행 선호 설정", intro: "계정에 저장되어 새 여행을 계획할 때 기본값으로 사용돼요. 여행마다 바꿀 수도 있어요.",
     save: "선호 설정 저장", saved: "저장했어요.", failed: "저장하지 못했어요. 다시 시도하세요.",
@@ -1166,6 +1185,16 @@ const ms: DeepPartial<typeof en> = {
   pcard: {
     edit: "Sunting", notSet: "Belum ditetapkan", account: "Akaun", changePassword: "Tukar kata laluan",
     changePasswordHint: "Kami akan e-melkan pautan untuk menetapkan kata laluan baharu", verified: "Disahkan", guideDetails: "Butiran pemandu",
+  },
+  cal: {
+    intro: "Pelancong hanya boleh menempah anda pada hari lapang. Tempahan sehari penuh memerlukan sekurang-kurangnya {{hours}} jam lapang.",
+    prev: "Bulan sebelumnya", next: "Bulan seterusnya", free: "Lapang", short: "Lapang, jam singkat", booked: "Ditempah", off: "Tidak lapang", past: "Lepas",
+    countFree_one: "{{count}} hari lapang", countFree_other: "{{count}} hari lapang",
+    countBooked_one: "{{count}} ditempah", countBooked_other: "{{count}} ditempah",
+    tapHint: "Ketik hari untuk memilihnya, kemudian tandakan lapang atau tidak lapang.", selectRest: "Pilih semua hari yang tinggal bulan ini",
+    selected_one: "{{count}} hari dipilih", selected_other: "{{count}} hari dipilih", clear: "Kosongkan",
+    now: "Sekarang", saving: "Menyimpan…", markFree: "Tandakan lapang", markOff: "Tandakan tidak lapang",
+    bookedNote: "Sesetengah hari ini sudah ditempah. Menandakannya tidak lapang tidak membatalkan tempahan.",
   },
   prefs: {
     title: "Pilihan perjalanan", intro: "Disimpan dalam akaun anda dan digunakan untuk setiap perjalanan baharu. Anda masih boleh mengubahnya untuk satu perjalanan.",
