@@ -2,6 +2,7 @@ import { useState, type FormEvent } from "react";
 import { Link, Navigate, useLocation } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ApiError } from "../api";
+import PasswordInput from "../PasswordInput";
 import { useAuth } from "../AuthContext";
 
 export default function LoginPage() {
@@ -35,7 +36,7 @@ export default function LoginPage() {
           <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />
         </label>
         <label>{t("auth.password")}
-          <input type="password" required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+          <PasswordInput required autoComplete="current-password" value={password} onChange={(e) => setPassword(e.target.value)} />
         </label>
         <p role="alert" className="error">{err}</p>
         <p role="status" className="muted">{busy ? t("auth.waking") : ""}</p>

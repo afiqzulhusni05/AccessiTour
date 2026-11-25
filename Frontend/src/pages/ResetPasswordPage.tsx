@@ -1,6 +1,7 @@
 import { useState, type FormEvent } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import PasswordInput from "../PasswordInput";
 import { ApiError, resetPassword } from "../api";
 
 /** Opened from the emailed link (?token=…): choose a new password. Each link works once, for 30 minutes. */
@@ -47,11 +48,11 @@ export default function ResetPasswordPage() {
       ) : (
         <form onSubmit={submit}>
           <label>{t("reset.newPassword")}
-            <input type="password" required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <PasswordInput required minLength={8} autoComplete="new-password" value={password} onChange={(e) => setPassword(e.target.value)} />
             <small className="muted">{t("auth.passwordHint")}</small>
           </label>
           <label>{t("reset.again")}
-            <input type="password" required autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} />
+            <PasswordInput required autoComplete="new-password" value={again} onChange={(e) => setAgain(e.target.value)} />
           </label>
           <p role="alert" className="error">{err}</p>
           {err && <p className="small-note"><Link to="/forgot-password">{t("reset.askAgain")}</Link></p>}

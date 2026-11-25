@@ -4,6 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ApiError } from "../api";
 import { useAuth } from "../AuthContext";
 import GuideFields from "../GuideFields";
+import PasswordInput from "../PasswordInput";
 import type { GuideProfileIn } from "../types";
 
 const ROLES = ["tourist", "guide"] as const;
@@ -66,7 +67,7 @@ export default function SignupPage() {
             <input type="email" required autoComplete="username" value={email} onChange={(e) => setEmail(e.target.value)} />
           </label>
           <label>{t("auth.password")}
-            <input type="password" required minLength={8} maxLength={128} autoComplete="new-password" aria-describedby="pw-hint"
+            <PasswordInput required minLength={8} maxLength={128} autoComplete="new-password" aria-describedby="pw-hint"
               value={password} onChange={(e) => setPassword(e.target.value)} />
             <small id="pw-hint" className="muted">{t("auth.passwordHint")}</small>
           </label>

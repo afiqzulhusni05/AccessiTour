@@ -550,3 +550,9 @@ ol.plain { margin: 0; padding-left: 1.2rem; font-weight: 600; }
 .hours-row { margin-top: .6rem; max-width: 24rem; }
 .nearest-toilet { margin: .4rem 0 0; font-size: .9rem; }
 .small-note { font-size: .85rem; margin: .3rem 0 0; flex-basis: 100%; }
+
+/* Password box with a Show / Hide button inside it */
+.pw-field { position: relative; display: block; }
+.pw-field input { width: 100%; padding-right: 4.75rem; }
+.pw-toggle { position: absolute; top: 50%; right: .35rem; transform: translateY(-50%); min-height: 34px; padding: 0 .6rem; border: 0; border-radius: 4px; background: none; color: var(--harbor); font-size: .9rem; font-weight: 600; cursor: pointer; }
+.pw-toggle:hover { background: var(--mist); }

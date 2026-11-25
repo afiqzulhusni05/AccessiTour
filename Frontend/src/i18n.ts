@@ -263,7 +263,7 @@ const en = {
   },
   auth: {
     signIn: "Sign in", signUp: "Create account", signOut: "Sign out",
-    email: "Email", password: "Password", passwordHint: "At least 8 characters.",
+    email: "Email", password: "Password", show: "Show", hide: "Hide", showPassword: "Show password", hidePassword: "Hide password", passwordHint: "At least 8 characters.",
     name: "Your name", nameGuide: "Name travellers will see",
     noAccount: "New here?", haveAccount: "Already have an account?",
     iAm: "I am a…",
@@ -668,7 +668,7 @@ const ko: typeof en = {
   },
   auth: {
     signIn: "로그인", signUp: "회원가입", signOut: "로그아웃",
-    email: "이메일", password: "비밀번호", passwordHint: "8자 이상 입력하세요.",
+    email: "이메일", password: "비밀번호", show: "보기", hide: "숨기기", showPassword: "비밀번호 보기", hidePassword: "비밀번호 숨기기", passwordHint: "8자 이상 입력하세요.",
     name: "이름", nameGuide: "여행자에게 보일 이름",
     noAccount: "처음이신가요?", haveAccount: "이미 계정이 있으신가요?",
     iAm: "가입 유형",
@@ -1056,7 +1056,7 @@ const ms: DeepPartial<typeof en> = {
   },
   auth: {
     signIn: "Log masuk", signUp: "Cipta akaun", signOut: "Log keluar",
-    email: "E-mel", password: "Kata laluan", passwordHint: "Sekurang-kurangnya 8 aksara.",
+    email: "E-mel", password: "Kata laluan", passwordHint: "Sekurang-kurangnya 8 aksara.", show: "Tunjuk", hide: "Sembunyi", showPassword: "Tunjukkan kata laluan", hidePassword: "Sembunyikan kata laluan",
     name: "Nama anda", nameGuide: "Nama yang dilihat pelancong",
     noAccount: "Baru di sini?", haveAccount: "Sudah ada akaun?",
     iAm: "Saya seorang…",
