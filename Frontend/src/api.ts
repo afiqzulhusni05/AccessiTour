@@ -244,8 +244,10 @@ function metresBetween(a: { lat: number; lng: number }, b: { lat: number; lng: n
 
 /** Suggestions in an area (the map in view, or a box around a day's stops). Used by the map's
  *  "Suggest places" button and by "Add a stop", so both give the same places.
- *  Asks the team server's TourAPI lookup first, then OpenStreetMap; fails when both can't answer. */
+ *  Asks OpenStreetMap first, then the team server's TourAPI lookup; fails when both can't answer. */
 export async function getRecommendations(it: Itinerary, bounds: Bounds): Promise<Recommendations> {
+  const found = await osm.nearbyPlaces(it, bounds).catch(() => null);
+  if (found && found.places.length) return found;
   const centre = { lat: (bounds.north + bounds.south) / 2, lng: (bounds.east + bounds.west) / 2 };
   const corner = { lat: bounds.north, lng: bounds.east };
   const radius = Math.round(Math.min(20000, Math.max(300, metresBetween(centre, corner))));
@@ -259,9 +261,8 @@ export async function getRecommendations(it: Itinerary, bounds: Bounds): Promise
   } catch (e) {
     if (e instanceof ApiError && e.status === 401) throw e;
   }
-  const found = await osm.nearbyPlaces(it, bounds).catch(() => null);
-  if (!found) throw new ApiError(503);
-  return found;
+  if (found) return found;
+  throw new ApiError(503);
 }
 /** Restaurant choices for lunch or dinner on one day. `near` is used when the day has no stop on the map yet. */
 export const getMealOptions = (it: Itinerary, day: number, meal: Meal, cuisines: Cuisine[], diets: MealDiet[], near?: { lat: number; lng: number }) =>
