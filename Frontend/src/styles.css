@@ -628,3 +628,21 @@ ol.plain { margin: 0; padding-left: 1.2rem; font-weight: 600; }
 }
 /* Sign-in forms: empty message lines take no space, but stay readable for screen readers when filled */
 .authcard form > p[role]:empty { position: absolute; width: 1px; height: 1px; overflow: hidden; margin: 0; }
+
+/* iPhone/iPad Safari draws date and time boxes wider than their column and leaves an empty box with
+   no hint. Make them fill the column exactly, left-align the value and add a calendar/clock icon. */
+.row > * { min-width: 0; }
+input[type="date"], input[type="time"] { min-width: 0; max-width: 100%; display: block; }
+@supports (-webkit-touch-callout: none) {
+  input[type="date"], input[type="time"] {
+    -webkit-appearance: none; appearance: none; height: 44px; line-height: 1.2;
+    background: #fff no-repeat right .7rem center / 20px 20px; padding-right: 2.5rem;
+  }
+  input[type="date"] {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2312263a' stroke-width='2' stroke-linecap='round'%3E%3Cpath d='M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1zM16 3v4M8 3v4M4 10h16'/%3E%3C/svg%3E");
+  }
+  input[type="time"] {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2312263a' stroke-width='2' stroke-linecap='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 7v5l3 2'/%3E%3C/svg%3E");
+  }
+  input::-webkit-date-and-time-value { text-align: left; margin: 0; }
+}
