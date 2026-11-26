@@ -129,6 +129,8 @@ export function Stop({ item, prev, next, near, accessNeeds, days, editable, isGu
   const [open, setOpen] = useState(false);
   const dur = useDuration();
   const late = overlapsNext(item, next);
+  // opened by the tourist or guide, the status picker shows the state, so no separate status tag then
+  const showPicker = open && editing === null && canComment;
 
   const send = async (e: FormEvent) => {
     e.preventDefault();
@@ -153,9 +155,9 @@ export function Stop({ item, prev, next, near, accessNeeds, days, editable, isGu
           <strong className="place">{item.place_name}</strong>
           {item.activity && <span className="what">{item.activity}</span>}
           {late && <span className="warn">{t("sched.overlap", { time: next!.start_time })}</span>}
-          {(item.progress !== "upcoming" || item.comments.length > 0) && (
+          {((item.progress !== "upcoming" && !showPicker) || item.comments.length > 0) && (
             <span className="badges">
-              {item.progress !== "upcoming" && (
+              {item.progress !== "upcoming" && !showPicker && (
                 <span className="prog"><span aria-hidden="true">{PROGRESS_MARK[item.progress]}</span> {t(`progress.state.${item.progress}`)}</span>
               )}
               {item.comments.length > 0 && <span>{t("collab.commentCount", { count: item.comments.length })}</span>}
@@ -164,8 +166,8 @@ export function Stop({ item, prev, next, near, accessNeeds, days, editable, isGu
         </button>
         {open && (<>
         <div className="badges">
-          {/* the mark and the words carry the state; colour only repeats it */}
-          <span className="prog"><span aria-hidden="true">{PROGRESS_MARK[item.progress]}</span> {t(`progress.state.${item.progress}`)}</span>
+          {/* the mark and the words carry the state; colour only repeats it. With the status picker open, it says the state already. */}
+          {!showPicker && <span className="prog"><span aria-hidden="true">{PROGRESS_MARK[item.progress]}</span> {t(`progress.state.${item.progress}`)}</span>}
           {item.meal && <span className="meal">{t(`meal.${item.meal}`)}</span>}
           {item.transport && <span>{t(`go.modes.${item.transport}`)}</span>}
           <span>
@@ -177,7 +179,7 @@ export function Stop({ item, prev, next, near, accessNeeds, days, editable, isGu
           {item.lat === null && <span>{t("map.unplaced")}</span>}
         </div>
 
-        {editing === null && canComment && (
+        {showPicker && (
           <label className="statuspick">{t("progress.status")}
             <select value={item.progress} disabled={busy} onChange={(e) => onProgress(e.target.value as Progress)}>
               {STATES.map((p) => <option key={p} value={p}>{PROGRESS_MARK[p]} {t(`progress.state.${p}`)}</option>)}
