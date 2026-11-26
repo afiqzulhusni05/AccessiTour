@@ -3,6 +3,7 @@ import { useTranslation } from "react-i18next";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
 import { getRecommendations, placeNameAt } from "./api";
+import { baseMap, type BaseMap } from "./mapBase";
 import { cityById } from "./regions";
 import { StopForm } from "./Stop";
 import { directionsLink } from "./mapLinks";
@@ -33,6 +34,7 @@ export default function TripMap({ itinerary: it, editable, busy, onAdd }: {
   const map = useRef<L.Map>();
   const layers = useRef({ near: L.layerGroup(), stops: L.layerGroup(), recs: L.layerGroup(), pick: L.layerGroup() });
   const fitted = useRef(false);
+  const baseRef = useRef<BaseMap>();
   const [recs, setRecs] = useState<Recommendations | null>(null);
   const [recState, setRecState] = useState<"idle" | "loading" | "error">("idle");
   const [draft, setDraft] = useState<StopFields | null>(null); // the place being added
@@ -59,15 +61,17 @@ export default function TripMap({ itinerary: it, editable, busy, onAdd }: {
     const city = cityById(it.trip.region);
     const [lat, lng, zoom] = city ? [city.lat, city.lng, city.zoom] : KOREA;
     const m = L.map(box.current!).setView([lat, lng], zoom);
-    L.tileLayer("https://tile.openstreetmap.org/{z}/{x}/{y}.png", {
-      maxZoom: 19,
-      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
-    }).addTo(m);
+    const base = baseMap(i18n.language);
+    base.layer.addTo(m);
+    baseRef.current = base;
     Object.values(layers.current).forEach((l) => l.addTo(m));
     m.on("click", (e) => onPick.current(e.latlng.lat, e.latlng.lng));
     map.current = m;
     return () => { m.remove(); fitted.current = false; };
-  }, [it.trip.region]);
+  }, [it.trip.region]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // map labels follow the app's language
+  useEffect(() => { baseRef.current?.setLanguage(i18n.language); }, [i18n.language]);
 
   useEffect(() => {
     const group = layers.current.stops.clearLayers();

@@ -11,7 +11,7 @@ describe("summarize", () => {
   });
   it("matches the worked example: 2 visited, 1 on the way, 1 upcoming, 1 skipped", () => {
     expect(summarize(stops("visited", "visited", "on_the_way", "upcoming", "skipped")))
-      .toEqual({ total: 5, visited: 2, skipped: 1, onTheWay: 1, upcoming: 1, remaining: 3, percent: 40 });
+      .toEqual({ total: 5, visited: 2, skipped: 1, onTheWay: 1, upcoming: 1, remaining: 2, percent: 40 });
   });
   it("does not count skipped stops as visited", () => {
     expect(summarize(stops("skipped", "skipped")).percent).toBe(0);

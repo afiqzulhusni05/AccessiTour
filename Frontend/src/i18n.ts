@@ -130,7 +130,7 @@ const en = {
   },
   progress: {
     title: "Trip progress", barLabel: "{{percent}}% of stops visited",
-    visited: "Visited", of: "{{n}} of {{total}}", remaining: "Not visited yet (includes skipped)", skipped: "Skipped",
+    visited: "Visited", of: "{{n}} of {{total}}", remaining: "Still to go", skipped: "Skipped",
     none: "This itinerary has no stops yet.", done: "No stops left to visit.",
     next: "Next stop: {{place}} at {{time}}", heading: "On the way to {{place}} ({{time}})",
     state: { upcoming: "Upcoming", on_the_way: "On the way", visited: "Visited", skipped: "Skipped" },
@@ -569,7 +569,7 @@ const ko: typeof en = {
   },
   progress: {
     title: "여행 진행 상황", barLabel: "방문 완료 {{percent}}%",
-    visited: "방문 완료", of: "{{total}}곳 중 {{n}}곳", remaining: "아직 방문 안 함 (건너뜀 포함)", skipped: "건너뜀",
+    visited: "방문 완료", of: "{{total}}곳 중 {{n}}곳", remaining: "남은 장소", skipped: "건너뜀",
     none: "아직 일정에 장소가 없어요.", done: "남은 장소가 없어요.",
     next: "다음 장소: {{place}} ({{time}})", heading: "{{place}}(으)로 이동 중 ({{time}})",
     state: { upcoming: "예정", on_the_way: "이동 중", visited: "방문 완료", skipped: "건너뜀" },
@@ -991,7 +991,7 @@ const ms: DeepPartial<typeof en> = {
   },
   progress: {
     title: "Kemajuan perjalanan", barLabel: "{{percent}}% hentian dilawati",
-    visited: "Dilawati", of: "{{n}} daripada {{total}}", remaining: "Belum dilawati (termasuk dilangkau)", skipped: "Dilangkau",
+    visited: "Dilawati", of: "{{n}} daripada {{total}}", remaining: "Belum dilawati", skipped: "Dilangkau",
     none: "Jadual perjalanan ini belum ada hentian.", done: "Tiada lagi hentian untuk dilawati.",
     next: "Hentian seterusnya: {{place}} pada {{time}}", heading: "Dalam perjalanan ke {{place}} ({{time}})",
     state: { upcoming: "Akan datang", on_the_way: "Dalam perjalanan", visited: "Dilawati", skipped: "Dilangkau" },

@@ -1,4 +1,4 @@
-import { useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
+import { lazy, Suspense, useEffect, useLayoutEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import { addComment, addStop, ApiError, approveItinerary, requestAiDraft, deleteStop, getItinerary, sendMessage, setStopProgress, updateStop } from "./api";
 import Chat from "./Chat";
@@ -7,10 +7,12 @@ import StopPicker from "./StopPicker";
 import { useLocalized } from "./names";
 import { Stop } from "./Stop";
 import { NavNote } from "./StopNav";
-import TripMap from "./TripMap";
 import TripProgress from "./TripProgress";
 import { STATES } from "./progress";
 import type { Itinerary, ItineraryItem, Meal, Progress, Role } from "./types";
+
+// The map and its drawing library are large, so they load only when an itinerary is opened.
+const TripMap = lazy(() => import("./TripMap"));
 
 const ROLES: Role[] = ["tourist", "guide"];
 const MEALS: Meal[] = ["lunch", "dinner"];
@@ -212,7 +214,9 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
 
       <p role="alert" className="error sticky">{msg}</p>
 
-      <TripMap itinerary={it} editable={editable} busy={busy} onAdd={(f) => run(() => addStop(it, f))} />
+      <Suspense fallback={<section className="mapslot" aria-busy="true" />}>
+        <TripMap itinerary={it} editable={editable} busy={busy} onAdd={(f) => run(() => addStop(it, f))} />
+      </Suspense>
 
       <NavNote hasNeeds={it.trip.mobility !== "normal"} />
 

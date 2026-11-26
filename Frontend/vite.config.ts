@@ -29,4 +29,5 @@ export default defineConfig({
     }),
   ],
   server: { port: 5173 },
+  worker: { format: "es" }, // the map's background worker (maplibre-gl) is an ES module
 });

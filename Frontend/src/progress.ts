@@ -9,7 +9,7 @@ export interface Summary {
   skipped: number;
   onTheWay: number;
   upcoming: number;
-  /** Stops not visited, whatever the reason: upcoming, on the way and skipped. Always total - visited. */
+  /** Stops still to go: upcoming and on the way. Visited + remaining + skipped = total. */
   remaining: number;
   /** Whole-number share of stops visited. Skipped stops do not count as visited. */
   percent: number;
@@ -21,7 +21,7 @@ export function summarize(items: { progress: Progress }[]): Summary {
   const visited = n("visited");
   return {
     total, visited, skipped: n("skipped"), onTheWay: n("on_the_way"), upcoming: n("upcoming"),
-    remaining: total - visited,
+    remaining: n("upcoming") + n("on_the_way"), // still to go; skipped stops are counted on their own
     percent: total === 0 ? 0 : Math.round((visited / total) * 100),
   };
 }

@@ -851,3 +851,4 @@ input[type="date"], input[type="time"] { min-width: 0; max-width: 100%; display:
 }
 .dragghost small { opacity: .85; }
 body:has(.dragghost) { user-select: none; -webkit-user-select: none; cursor: grabbing; }
+.mapslot { min-height: 22rem; } /* holds the place while the map code loads */
