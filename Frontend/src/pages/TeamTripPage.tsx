@@ -11,6 +11,9 @@ import TripProgress from "../TripProgress";
 import Avatar from "../Avatar";
 import type { Booking, Itinerary } from "../types";
 
+/** The guide isn't free on every day of the stay, so they can't be requested for it. */
+const isPartly = (m: team.TeamMatch) => m.breakdown.some((f) => f.factor === "availability" && f.score < 1);
+
 const OPEN: Booking["status"][] = ["pending", "accepted", "completed"]; // a segment with one of these is taken
 
 /**
@@ -167,8 +170,19 @@ export default function TeamTripPage() {
             {!found || found.items.length === 0 ? (
               <p>{t("teamtrip.none")}</p>
             ) : (
+              <>
+              {/* Guides who can be booked come first, each group by match score: a high score is no use if the
+                  Request button is off. Guides free on only some days are listed after, under their own heading. */}
+              {[false, true].map((later) => {
+                const group = found.items
+                  .filter((m) => isPartly(m) === later)
+                  .sort((a, b) => b.total_score - a.total_score);
+                if (group.length === 0) return null;
+                return (
+              <div key={String(later)}>
+              {later && <h3 className="guides-split">{t("teamtrip.someDays", { count: group.length })}</h3>}
               <ol className="guides">
-                {found.items.map((m) => {
+                {group.map((m) => {
                   const partly = m.breakdown.find((f) => f.factor === "availability" && f.score < 1);
                   return (
                     <li key={m.guide.id} className="teamguide">
@@ -212,6 +226,10 @@ export default function TeamTripPage() {
                   );
                 })}
               </ol>
+              </div>
+                );
+              })}
+              </>
             )}
             {found && found.excluded.length > 0 && (
               <details className="excluded">

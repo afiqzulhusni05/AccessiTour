@@ -886,3 +886,4 @@ a.whoami:focus-visible { outline: 3px solid var(--harbor); outline-offset: 2px; 
 .phead-photoacts { display: flex; flex-wrap: wrap; gap: .25rem 1rem; margin: .35rem 0 0; }
 .phead-photoacts .textlink { font-size: .9rem; }
 .phead-hint { font-size: .85rem; margin: .25rem 0 0; }
+.guides-split { margin: 1.5rem 0 .6rem; padding-top: 1rem; border-top: 1px dashed var(--mist); font-size: 1rem; color: var(--muted); }
