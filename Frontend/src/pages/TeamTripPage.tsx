@@ -9,6 +9,7 @@ import { summarize } from "../progress";
 import * as team from "../teamApi";
 import TripProgress from "../TripProgress";
 import Avatar from "../Avatar";
+import GuideCalendar from "../GuideCalendar";
 import type { Booking, Itinerary } from "../types";
 
 /** The guide isn't free on every day of the stay, so they can't be requested for it. */
@@ -32,7 +33,7 @@ export default function TeamTripPage() {
   const [tab, setTab] = useState(0);
   const [busy, setBusy] = useState<number | null>(null); // guide being requested
   const [msg, setMsg] = useState("");
-  const [missing, setMissing] = useState<Record<string, string[]>>({}); // "segment:guide" -> days the guide isn't free
+  const [calFor, setCalFor] = useState<string | null>(null); // "segment:guide" whose availability calendar is open
 
   const load = useCallback(async () => {
     const tok = teamToken()!;
@@ -84,25 +85,6 @@ export default function TeamTripPage() {
     const to = (tab + step + trip.segments.length) % trip.segments.length;
     setTab(to);
     document.getElementById(`segtab-${to}`)?.focus();
-  };
-
-  /**
-   * Which days of the stay a guide hasn't marked as free, looked up when asked: for full days, 6+ free hours
-   * that day; for a short session, one free stretch covering its hours.
-   */
-  const showMissing = async (s: team.TeamSegment, m: team.TeamMatch) => {
-    const slots = await team.guideAvailability(teamToken()!, m.guide.id, s.start_date, s.end_date).catch(() => null);
-    if (!slots) return;
-    const hours = (x: team.TeamSlot) => (Date.parse(`2000-01-01T${x.end_time.slice(0, 5)}`) - Date.parse(`2000-01-01T${x.start_time.slice(0, 5)}`)) / 36e5;
-    const days: string[] = [];
-    for (let d = new Date(`${s.start_date}T00:00`); d <= new Date(`${s.end_date}T00:00`); d.setDate(d.getDate() + 1)) {
-      const day = d.toLocaleDateString("sv");
-      const fits = (x: team.TeamSlot) => (s.service_type === "MICRO" && s.start_time && s.end_time
-        ? x.start_time.slice(0, 5) <= s.start_time.slice(0, 5) && x.end_time.slice(0, 5) >= s.end_time.slice(0, 5)
-        : hours(x) >= 6);
-      if (!slots.some((x) => x.date === day && fits(x))) days.push(day);
-    }
-    setMissing((prev) => ({ ...prev, [`${s.id}:${m.guide.id}`]: days }));
   };
 
   const shortDate = (d: string) => new Date(`${d}T00:00`).toLocaleDateString(i18n.language, { month: "short", day: "numeric" });
@@ -208,9 +190,14 @@ export default function TeamTripPage() {
                         </ul>
                         {partly && <p className="warn">{t("teamtrip.partly")}</p>}
                         {partly && (() => {
-                          const days = missing[`${seg.id}:${m.guide.id}`];
-                          if (!days) return <button type="button" className="textlink" onClick={() => showMissing(seg, m)}>{t("teamtrip.whichDays")}</button>;
-                          return <p className="muted">{days.length ? t("teamtrip.notFreeOn", { days: days.join(", ") }) : t("teamtrip.bookedElsewhere")}</p>;
+                          const key = `${seg.id}:${m.guide.id}`;
+                          const open = calFor === key;
+                          return (<>
+                            <button type="button" className="textlink" aria-expanded={open} onClick={() => setCalFor(open ? null : key)}>
+                              {t(open ? "teamtrip.hideDays" : "teamtrip.whichDays")}
+                            </button>
+                            {open && <GuideCalendar guide={m.guide} seg={seg} />}
+                          </>);
                         })()}
                       </div>
                       <div className="score">

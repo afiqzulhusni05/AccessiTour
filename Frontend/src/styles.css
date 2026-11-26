@@ -887,3 +887,13 @@ a.whoami:focus-visible { outline: 3px solid var(--harbor); outline-offset: 2px; 
 .phead-photoacts .textlink { font-size: .9rem; }
 .phead-hint { font-size: .85rem; margin: .25rem 0 0; }
 .guides-split { margin: 1.5rem 0 .6rem; padding-top: 1rem; border-top: 1px dashed var(--mist); font-size: 1rem; color: var(--muted); }
+
+/* A guide's free days for one stay, opened from "Which days?" on a match card */
+.guidecal { margin-top: .6rem; padding: .75rem; background: #fff; border: 1px solid var(--mist); border-radius: 12px; position: relative; z-index: 1; }
+.guidecal .calhead h4 { margin: 0; font-size: 1rem; }
+.guidecal .calday { min-height: 2.9rem; }
+.guidecal .calday.trip { border-color: var(--ink); }
+.guidecal .calday.outside { opacity: .45; }
+.guidecal .callegend { font-size: .8rem; }
+.guidecal > p { margin: .6rem 0 0; font-size: .9rem; }
+.dot.trip { background: #fff; border: 2px solid var(--ink); }

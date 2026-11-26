@@ -3,30 +3,14 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { ApiError, listBookings, teamToken } from "../api";
 import * as team from "../teamApi";
+import { datesBetween, iso, monthGrid, weekdayNames } from "../calendar";
 
 const hhmm = (time: string) => time.slice(0, 5);
-const iso = (d: Date) => d.toLocaleDateString("sv"); // local YYYY-MM-DD
 const today = () => iso(new Date());
 const FULL_DAY_HOURS = 6; // the team matcher counts a free stretch this long as a full day
 
-/** Every date from `from` to `to`, inclusive. */
-function datesBetween(from: string, to: string): string[] {
-  const out: string[] = [];
-  for (let d = new Date(`${from}T00:00`); d <= new Date(`${to}T00:00`); d.setDate(d.getDate() + 1)) out.push(iso(d));
-  return out;
-}
 const hours = (s: team.TeamSlot) =>
   (Date.parse(`2000-01-01T${hhmm(s.end_time)}`) - Date.parse(`2000-01-01T${hhmm(s.start_time)}`)) / 36e5;
-
-/** The 6×7 grid of dates shown for a month, starting on Sunday; days outside the month are null. */
-function monthGrid(year: number, month: number): (string | null)[] {
-  const first = new Date(year, month, 1);
-  const days = new Date(year, month + 1, 0).getDate();
-  const cells: (string | null)[] = Array(first.getDay()).fill(null);
-  for (let d = 1; d <= days; d++) cells.push(iso(new Date(year, month, d)));
-  while (cells.length % 7) cells.push(null);
-  return cells;
-}
 
 type DayState = "free" | "short" | "booked" | "off" | "past";
 
@@ -98,7 +82,7 @@ export default function AvailabilityPage() {
   const cells = monthGrid(month.y, month.m);
   const inMonth = cells.filter((c): c is string => !!c);
   const monthName = new Date(month.y, month.m, 1).toLocaleDateString(i18n.language, { month: "long", year: "numeric" });
-  const weekdays = [...Array(7)].map((_, i) => new Date(2024, 8, 1 + i).toLocaleDateString(i18n.language, { weekday: "narrow" })); // 1 Sep 2024 was a Sunday
+  const weekdays = weekdayNames(i18n.language);
   const longDay = (d: string) => new Date(`${d}T00:00`).toLocaleDateString(i18n.language, { weekday: "long", day: "numeric", month: "long" });
   const isThisMonth = month.y === new Date().getFullYear() && month.m === new Date().getMonth();
   const counts = { free: 0, short: 0, booked: 0 };
