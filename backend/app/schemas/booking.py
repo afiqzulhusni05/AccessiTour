@@ -1,6 +1,6 @@
 import datetime as dt
 
-from pydantic import BaseModel
+from pydantic import BaseModel, model_validator
 
 from app.enums import BookingStatus, Language, MobilityLevel, Region, ServiceType
 from app.schemas.matching import GuideSummary
@@ -9,6 +9,18 @@ from app.schemas.matching import GuideSummary
 class BookingCreate(BaseModel):
     segment_id: int
     guide_id: int
+    # Optional: book the guide for only part of the segment. Both, or neither.
+    start_date: dt.date | None = None
+    end_date: dt.date | None = None
+
+    @model_validator(mode="after")
+    def both_dates_or_neither(self):
+        if (self.start_date is None) != (self.end_date is None):
+            raise ValueError("Give both start_date and end_date, or neither")
+        if self.start_date and self.end_date < self.start_date:
+            raise ValueError("end_date cannot be before start_date")
+        return self
+
 
 
 class TouristBrief(BaseModel):

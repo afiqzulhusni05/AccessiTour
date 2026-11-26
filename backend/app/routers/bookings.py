@@ -1,4 +1,5 @@
 import datetime as dt
+from dataclasses import replace
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy import select
@@ -7,7 +8,7 @@ from sqlalchemy.orm import Session
 from app.database import get_db
 from app.deps import get_current_user, require_guide, require_tourist
 from app.deletion_rules import booking_delete_problem
-from app.enums import BookingStatus
+from app.enums import BookingStatus, ServiceType
 from app.matching import bookings_overlap, estimate_price, exclusion_reason, free_days
 from app.models import Booking, Guide, Tourist, Trip, TripSegment, User
 from app.routers.matching import BLOCKING_STATUSES, load_guides, summary
@@ -116,42 +117,53 @@ def create_booking(
     user: User = Depends(require_tourist),
     db: Session = Depends(get_db),
 ):
-    """Ask a guide to take one part (segment) of your trip."""
+    """Ask a guide to take a segment, or just some of its days (start_date/end_date)."""
     tourist = get_tourist(db, user)
 
     segment = db.get(TripSegment, data.segment_id)
     if segment is None or db.get(Trip, segment.trip_id).tourist_id != tourist.id:
         raise HTTPException(status_code=404, detail="Trip segment not found")
-    if segment.start_date < dt.date.today():
+
+    # The days this booking covers: the whole segment unless the tourist picked part of it
+    start = data.start_date or segment.start_date
+    end = data.end_date or segment.end_date
+    if start < segment.start_date or end > segment.end_date:
+        raise HTTPException(status_code=400, detail="Those dates are outside this part of your trip")
+    if segment.service_type == ServiceType.MICRO and (start, end) != (
+        segment.start_date,
+        segment.end_date,
+    ):
+        raise HTTPException(status_code=400, detail="A short session can't be split between guides")
+    if start < dt.date.today():
         raise HTTPException(status_code=400, detail="This part of your trip has already started")
 
-    existing = db.scalar(
+    # Several guides can share a segment, but not the same days
+    active = db.scalars(
         select(Booking).where(
             Booking.segment_id == segment.id, Booking.status.in_(ACTIVE_STATUSES)
         )
     )
-    if existing is not None:
-        raise HTTPException(
-            status_code=409,
-            detail=f"This part of your trip already has booking {existing.id} "
-            f"({existing.status.value}). Cancel it before booking another guide.",
-        )
+    for existing in active:
+        if existing.start_date <= end and existing.end_date >= start:
+            raise HTTPException(
+                status_code=409,
+                detail=f"Booking {existing.id} ({existing.status.value}) already covers "
+                f"{existing.start_date:%d %b} to {existing.end_date:%d %b}. "
+                f"Cancel it before booking another guide for those days.",
+            )
 
-    candidates, guides_by_id = load_guides(
-        db, segment.start_date, segment.end_date, guide_ids=[data.guide_id]
-    )
+    candidates, guides_by_id = load_guides(db, start, end, guide_ids=[data.guide_id])
     if not candidates:
         raise HTTPException(status_code=404, detail="Guide not found")
     candidate = candidates[0]
 
-    # Same checks as matching, so the guide must be one matching would show
-    request = to_segment_request(segment)
+    # Same checks as matching, but for the days being booked
+    request = replace(to_segment_request(segment), start_date=start, end_date=end)
     reason = exclusion_reason(candidate, request)
     if reason is not None:
         raise HTTPException(
             status_code=409, detail=f"Can't book {candidate.full_name}: {reason}"
         )
-    # Matching allows a guide who is free on only some days; a booking needs all of them
     free = set(free_days(candidate, request))
     missing = [day for day in request.days() if day not in free]
     if missing:
@@ -164,8 +176,8 @@ def create_booking(
         segment_id=segment.id,
         guide_id=candidate.id,
         service_type=segment.service_type,
-        start_date=segment.start_date,
-        end_date=segment.end_date,
+        start_date=start,
+        end_date=end,
         start_time=segment.start_time,
         end_time=segment.end_time,
         # Copied now so later changes to the guide's rates don't change this booking

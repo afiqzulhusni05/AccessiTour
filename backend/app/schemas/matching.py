@@ -89,3 +89,23 @@ class MatchResponse(BaseModel):
     total: int
     items: list[MatchItem]
     excluded: list[ExcludedItem]
+
+class CoverageOptionRead(BaseModel):
+    guide: GuideSummary
+    total_score: float
+    price: int
+
+
+class CoverageBlockRead(BaseModel):
+    start_date: dt.date
+    end_date: dt.date
+    days: int
+    options: list[CoverageOptionRead]  # first one is the suggestion
+
+
+class CoveragePlanResponse(BaseModel):
+    segment_id: int
+    single_guide: bool
+    blocks: list[CoverageBlockRead]
+    uncovered_days: list[dt.date]
+    total_price: int

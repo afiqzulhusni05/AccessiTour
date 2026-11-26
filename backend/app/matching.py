@@ -16,7 +16,7 @@ How it works:
 """
 
 import datetime as dt
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 
 from app.enums import (
     AccessibilityExperience,
@@ -382,6 +382,95 @@ def combine_whole_trip(per_segment: list[list[MatchResult]]) -> list[WholeTripRe
         key=lambda w: (-w.segments_covered, -w.average_score, w.total_price, w.guide.id)
     )
     return combined
+
+# ---------- One segment shared between several guides ----------
+
+
+@dataclass
+class CoverageOption:
+    guide: GuideCandidate
+    score: float
+    price: int  # for this block's days only
+
+
+@dataclass
+class CoverageBlock:
+    start_date: dt.date
+    end_date: dt.date
+    options: list[CoverageOption]  # options[0] is the suggested guide; the rest can take the same days
+
+
+@dataclass
+class CoveragePlan:
+    blocks: list[CoverageBlock]
+    uncovered_days: list[dt.date]
+    total_price: int  # suggested guides only
+
+    @property
+    def single_guide(self) -> bool:
+        return len(self.blocks) == 1 and not self.uncovered_days
+
+
+def plan_coverage(
+    segment: SegmentRequest,
+    results: list[MatchResult],
+    skip_days: set[dt.date] | None = None,
+) -> CoveragePlan:
+    """Cover a multi-day segment with as few guide changes as possible.
+
+    `results` is match_guides() output (best score first). From the first day still
+    needing a guide, pick the guide free for the longest unbroken run of days
+    (ties go to the better score), then continue from the day after that run.
+    Days in skip_days are already booked and are left out. Days nobody can take
+    are returned in uncovered_days. FULL_DAY segments only.
+    """
+    skip = skip_days or set()
+    days = segment.days()
+    free = {r.guide.id: set(free_days(r.guide, segment)) - skip for r in results}
+
+    blocks: list[CoverageBlock] = []
+    uncovered: list[dt.date] = []
+    i = 0
+    while i < len(days):
+        if days[i] in skip:
+            i += 1
+            continue
+
+        best, best_run = None, 0
+        for r in results:
+            run = 0
+            while i + run < len(days) and days[i + run] in free[r.guide.id]:
+                run += 1
+            if run > best_run:  # strict ">" keeps the higher score on a tie
+                best, best_run = r, run
+
+        if best is None:
+            uncovered.append(days[i])
+            i += 1
+            continue
+
+        block_days = set(days[i : i + best_run])
+        block_segment = replace(segment, start_date=days[i], end_date=days[i + best_run - 1])
+        options = [
+            CoverageOption(
+                guide=r.guide,
+                score=r.total_score,
+                price=estimate_price(r.guide.services[segment.service_type], block_segment),
+            )
+            for r in results
+            if block_days <= free[r.guide.id]
+        ]
+        options.sort(key=lambda o: o.guide.id != best.guide.id)  # suggested guide first, rest stay by score
+        blocks.append(
+            CoverageBlock(start_date=block_segment.start_date, end_date=block_segment.end_date, options=options)
+        )
+        i += best_run
+
+    return CoveragePlan(
+        blocks=blocks,
+        uncovered_days=uncovered,
+        total_price=sum(b.options[0].price for b in blocks),
+    )
 
 
 # ---------- Bookings ----------
