@@ -21,6 +21,7 @@ const ICONS = {
   logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9",
   chevron: "M9 6l6 6-6 6",
   camera: "M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
+  pencil: "M4 20h4L19 9l-4-4L4 16zM13.5 6.5l4 4",
 };
 export type IconName = keyof typeof ICONS;
 
@@ -68,7 +69,6 @@ export function ProfileHeader({ user, badge, editing, onEdit, photo, onPhoto }: 
         <h2>{user.display_name}</h2>
         <p>{user.email}</p>
         <p className="phead-tags"><span className="pill">{t(`role.${user.role}`)}</span>{badge}</p>
-        {!editing && <button type="button" className="ghost small phead-editbtn" onClick={onEdit}>{t("pcard.editProfile")}</button>}
         {editing && (<>
           <p className="phead-photoacts">
             <button type="button" className="textlink" onClick={() => input.current?.click()}>{t(has ? "pcard.photoChange" : "pcard.photoAdd")}</button>
@@ -77,6 +77,11 @@ export function ProfileHeader({ user, badge, editing, onEdit, photo, onPhoto }: 
           {!has && <p className="muted phead-hint">{t(user.role === "guide" ? "pcard.photoHintGuide" : "pcard.photoHintTourist")}</p>}
         </>)}
       </div>
+      {!editing && (
+        <button type="button" className="icon-btn phead-editbtn" onClick={onEdit} aria-label={t("pcard.editProfile")} title={t("pcard.editProfile")}>
+          <Icon name="pencil" />
+        </button>
+      )}
     </section>
   );
 }
