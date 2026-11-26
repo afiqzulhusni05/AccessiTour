@@ -907,3 +907,11 @@ a.whoami:focus-visible { outline: 3px solid var(--harbor); outline-offset: 2px; 
 .editbar p { margin: 0 0 .5rem; }
 @media (max-width: 52rem) { .editbar { bottom: calc(4.75rem + env(safe-area-inset-bottom)); margin-right: 4.5rem; } }
 .profile > .pcard-msg { margin: .5rem 0 0; }
+
+/* Buttons under each stop: compact pills sized to their text (36px tall: still an easy tap, well above WCAG's 24px) */
+.stops .small, .stops a.btn.small { min-height: 36px; padding: .15rem .75rem; font-size: .82rem; }
+.stops .rowbtns > button, .stops .rowbtns > a, .stops .stopnav li { flex: 0 0 auto; }
+.stops .stopnav a.btn { width: auto; }
+.stops .commentform input { min-height: 36px; padding: .3rem .65rem; font-size: .9rem; }
+.stops .statuspick select { min-height: 36px; }
+.stops .stopform .small { min-height: 40px; font-size: .9rem; } /* the edit form keeps larger buttons */
