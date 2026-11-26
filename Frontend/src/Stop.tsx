@@ -130,6 +130,8 @@ export function Stop({ item, next, near, accessNeeds, days, editable, isGuide, c
   const late = overlapsNext(item, next);
   // opened by the tourist or guide, the status picker shows the state, so no separate status tag then
   const showPicker = open && editing === null && canComment;
+  // a visited stop is history: it can't be edited or moved (setting its status back unlocks it)
+  const locked = item.progress === "visited";
 
   const send = async (e: FormEvent) => {
     e.preventDefault();
@@ -141,7 +143,7 @@ export function Stop({ item, next, near, accessNeeds, days, editable, isGuide, c
       <div className="when">
         <time>{item.start_time}</time>
         {item.duration_min > 0 && <small>{dur(item.duration_min)}</small>}
-        {onDragStart && editable && (
+        {onDragStart && editable && !locked && (
           <button
             type="button" className="draghandle" disabled={busy} onPointerDown={onDragStart}
             aria-label={t("collab.move", { place: item.place_name })} title={t("collab.move", { place: item.place_name })}
@@ -203,8 +205,10 @@ export function Stop({ item, next, near, accessNeeds, days, editable, isGuide, c
           />
         ) : editable && (
           <div className="rowbtns">
-            <button type="button" className="ghost small" onClick={() => setEditing(item.version)} aria-label={`${t("collab.edit")}: ${item.place_name}`}>{t("collab.edit")}</button>
-            <button type="button" className="ghost small" disabled={busy} onClick={onDelete} aria-label={`${t("collab.remove")}: ${item.place_name}`}>{t("collab.remove")}</button>
+            {locked ? <p className="muted small-note">{t("collab.locked")}</p> : (<>
+              <button type="button" className="ghost small" onClick={() => setEditing(item.version)} aria-label={`${t("collab.edit")}: ${item.place_name}`}>{t("collab.edit")}</button>
+              <button type="button" className="ghost small" disabled={busy} onClick={onDelete} aria-label={`${t("collab.remove")}: ${item.place_name}`}>{t("collab.remove")}</button>
+            </>)}
             {isGuide && item.needs_accessibility_check && (
               <button type="button" className="primary small" disabled={busy} onClick={onCheck} aria-label={`${t("collab.markChecked")}: ${item.place_name}`}>{t("collab.markChecked")}</button>
             )}
