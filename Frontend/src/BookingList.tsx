@@ -4,7 +4,7 @@ import { useTranslation } from "react-i18next";
 import { ApiError, decideBooking, deleteBooking } from "./api";
 import { useLocalized } from "./names";
 import type { AccountRole, Booking } from "./types";
-import GuideAvatar from "./GuideAvatar";
+import Avatar from "./Avatar";
 
 /**
  * Booking requests with the actions the viewer may take: a tourist cancels, a guide accepts or
@@ -73,7 +73,8 @@ export default function BookingList({ bookings, viewer, onChange }: {
           return (
             <li key={b.id}>
               <div className="row1">
-                {viewer === "tourist" && <GuideAvatar name={loc(b.guide_name, b.guide_name_ko)} photo={b.guide_photo} size="sm" />}
+                {viewer === "tourist" && <Avatar name={loc(b.guide_name, b.guide_name_ko)} photo={b.guide_photo} size="sm" />}
+                {viewer === "guide" && <Avatar name={b.owner_name} photo={b.owner_photo} size="sm" />}
                 <h3>{t(`region.${p.region}`)} · {viewer === "tourist" ? guide : from}</h3>
                 <span className={"state " + b.status}>{t(`booking.status.${b.status}`)}</span>
               </div>

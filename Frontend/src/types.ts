@@ -145,6 +145,7 @@ export interface User {
   display_name: string;
   role: AccountRole;
   guide_id: number | null; // for guides: their profile in the guide list
+  photo_url?: string | null; // profile photo path in the team API; null = none
 }
 
 export interface Session {
@@ -217,7 +218,8 @@ export interface Booking {
   guide_id: number;
   guide_name: string;
   guide_name_ko: string;
-  guide_photo?: string | null; // the guide's profile photo, when the API sends one
+  guide_photo?: string | null; // the guide's profile photo, when they have one
+  owner_photo?: string | null; // the tourist's, shown to their guide
   trip: TouristProfile;
   score: number | null; // match score when the request was sent, 0..1; null for team-API bookings
   created_at: string;

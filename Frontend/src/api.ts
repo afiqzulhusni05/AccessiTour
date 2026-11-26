@@ -54,9 +54,32 @@ async function authed<T>(fn: (tok: string) => Promise<T>): Promise<T> {
 
 export interface Session { token: string; user: User }
 
+/** Shrinks a photo in the browser first (phone photos are often over the 5 MB limit), then uploads it. */
+export const setMyPhoto = (file: File) => authed(async (tok) => { await team.uploadPhoto(tok, await shrinkPhoto(file)); });
+export const removeMyPhoto = () => authed(async (tok) => { await team.deletePhoto(tok); });
+
+async function shrinkPhoto(file: File, max = 1024): Promise<Blob> {
+  try {
+    const bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
+    const scale = Math.min(1, max / Math.max(bmp.width, bmp.height));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(bmp.width * scale);
+    canvas.height = Math.round(bmp.height * scale);
+    const ctx = canvas.getContext("2d")!;
+    ctx.fillStyle = "#fff"; // transparent PNGs on white, as the server does
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(bmp, 0, 0, canvas.width, canvas.height);
+    bmp.close();
+    const blob = await new Promise<Blob | null>((ok) => canvas.toBlob(ok, "image/jpeg", 0.9));
+    return blob ?? file;
+  } catch {
+    return file; // the browser can't read it; let the server decide
+  }
+}
+
 export const getMe = (): Promise<User> => authed(async (tok) => {
   const me = await team.me(tok);
-  return { id: me.id, email: me.email, display_name: me.full_name, role: me.role.toLowerCase() as AccountRole, guide_id: null };
+  return { id: me.id, email: me.email, display_name: me.full_name, role: me.role.toLowerCase() as AccountRole, guide_id: null, photo_url: me.photo_url ?? null };
 });
 
 export async function login(email: string, password: string): Promise<Session> {
@@ -110,7 +133,7 @@ async function toBooking(tok: string, b: team.TeamBooking): Promise<Booking> {
     itineraryId = await team.openItinerary(tok, b.id).then((it) => it.id).catch(() => null); // listed without a link if this fails
   }
   return {
-    id: b.id, status, owner_name: b.tourist.full_name, guide_id: b.guide.id, guide_name: b.guide.full_name, guide_name_ko: "", guide_photo: b.guide.photo_url ?? null,
+    id: b.id, status, owner_name: b.tourist.full_name, guide_id: b.guide.id, guide_name: b.guide.full_name, guide_name_ko: "", guide_photo: b.guide.photo_url ?? null, owner_photo: b.tourist.photo_url ?? null,
     trip: {
       region: b.region.toLowerCase(), start_date: b.start_date, end_date: b.end_date, party_size: b.group_size,
       languages: [b.tourist.preferred_language], budget_per_day: Math.round(b.total_price / days(b.start_date, b.end_date)),

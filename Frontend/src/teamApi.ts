@@ -6,9 +6,10 @@ const TEAM = (import.meta.env.VITE_TEAM_API_URL ?? "https://accessitour-api.onre
 
 async function call<T>(method: string, path: string, token: string | null, body?: unknown): Promise<T> {
   const headers: Record<string, string> = {};
-  if (body) headers["Content-Type"] = "application/json";
+  const form = body instanceof FormData; // file uploads: the browser sets the multipart Content-Type itself
+  if (body && !form) headers["Content-Type"] = "application/json";
   if (token) headers.Authorization = `Bearer ${token}`;
-  const res = await fetch(`${TEAM}${path}`, { method, headers, body: body ? JSON.stringify(body) : undefined });
+  const res = await fetch(`${TEAM}${path}`, { method, headers, body: form ? body : body ? JSON.stringify(body) : undefined });
   if (res.status === 204) return undefined as T; // deleted: no body
   if (!res.ok) {
     const body = await res.json().catch(() => null);
@@ -25,8 +26,25 @@ export const forgotPassword = (email: string) => call<{ ok: boolean }>("POST", "
 export const resetPassword = (token: string, newPassword: string) =>
   call<{ ok: boolean }>("POST", "/auth/reset-password", null, { token, new_password: newPassword });
 
-export interface TeamUser { id: number; email: string; full_name: string; role: "TOURIST" | "GUIDE"; created_at: string }
+export interface TeamUser {
+  id: number; email: string; full_name: string; role: "TOURIST" | "GUIDE"; created_at: string;
+  photo_url?: string | null; // e.g. "/users/3/photo?v=…", relative to the API root; null = no photo
+}
 export const me = (token: string) => call<TeamUser>("GET", "/users/me", token);
+
+// ---------- profile photos
+export function uploadPhoto(token: string, photo: Blob) {
+  const form = new FormData();
+  form.append("file", photo, "photo.jpg");
+  return call<TeamUser>("PUT", "/users/me/photo", token, form);
+}
+export const deletePhoto = (token: string) => call<TeamUser>("DELETE", "/users/me/photo", token);
+/** A photo needs the sign-in token, so it's fetched here rather than by an <img src>. */
+export async function photoBlob(token: string, path: string): Promise<Blob> {
+  const res = await fetch(`${TEAM}${path}`, { headers: { Authorization: `Bearer ${token}` } });
+  if (!res.ok) throw new ApiError(res.status);
+  return res.blob();
+}
 
 export const register = (email: string, password: string, fullName: string, role: "tourist" | "guide") =>
   call<unknown>("POST", "/auth/register", null, { email, password, full_name: fullName, role: role.toUpperCase() });
@@ -216,8 +234,7 @@ export interface TeamTrip { id: number; title: string | null; start_date: string
 export interface TeamGuideSummary {
   id: number;
   full_name: string;
-  /** The guide's profile photo. Not sent by the API yet (see docs/guide-photos.md); until then the initial is shown. */
-  photo_url?: string | null;
+  photo_url?: string | null; // the guide's profile photo (see photoBlob); null = none
   gender: string;
   languages: string[];
   regions: string[];
@@ -254,7 +271,7 @@ export interface TeamBooking {
   total_price: number;
   paid_at?: string | null; // set by the demo payment
   guide: TeamGuideSummary;
-  tourist: { id: number; full_name: string; preferred_language: string; mobility_level: string };
+  tourist: { id: number; full_name: string; preferred_language: string; mobility_level: string; photo_url?: string | null };
   created_at: string;
 }
 

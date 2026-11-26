@@ -3,6 +3,7 @@ import { Link, NavLink, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
 import { useAuth } from "./AuthContext";
 import LanguageMenu from "./LanguageMenu";
+import Avatar from "./Avatar";
 import type { AccountRole, User } from "./types";
 
 const ICONS = {
@@ -66,12 +67,12 @@ export default function Shell({ user, children }: { user: User; children: ReactN
           {/* the name and initial open My profile (admins have no profile page) */}
           {user.role === "admin" ? (
             <span className="whoami">
-              <span className="avatar" aria-hidden="true">{user.display_name.slice(0, 1).toUpperCase()}</span>
+              <Avatar name={user.display_name} photo={user.photo_url} size="sm" tone="crimson" />
               <span className="whoami-text">{user.display_name}<small>{t(`role.${user.role}`)}</small></span>
             </span>
           ) : (
             <Link to="/profile" className="whoami" aria-label={`${t("nav.profile")}: ${user.display_name}`} title={t("nav.profile")}>
-              <span className="avatar" aria-hidden="true">{user.display_name.slice(0, 1).toUpperCase()}</span>
+              <Avatar name={user.display_name} photo={user.photo_url} size="sm" tone="crimson" />
               <span className="whoami-text" aria-hidden="true">{user.display_name}<small>{t(`role.${user.role}`)}</small></span>
             </Link>
           )}

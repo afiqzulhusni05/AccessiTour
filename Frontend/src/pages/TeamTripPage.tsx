@@ -8,7 +8,7 @@ import { stayDays } from "../multiCity";
 import { summarize } from "../progress";
 import * as team from "../teamApi";
 import TripProgress from "../TripProgress";
-import GuideAvatar from "../GuideAvatar";
+import Avatar from "../Avatar";
 import type { Booking, Itinerary } from "../types";
 
 const OPEN: Booking["status"][] = ["pending", "accepted", "completed"]; // a segment with one of these is taken
@@ -174,7 +174,7 @@ export default function TeamTripPage() {
                     <li key={m.guide.id} className="teamguide">
                       <div className="who">
                         <div className="whohead">
-                          <GuideAvatar name={m.guide.full_name} photo={m.guide.photo_url} size="lg" />
+                          <Avatar name={m.guide.full_name} photo={m.guide.photo_url} size="lg" />
                           <div>
                         <h3>{m.guide.full_name}{m.guide.verified && <span className="sampletag">{t("teamtrip.verified")}</span>}</h3>
                         <p className="muted">

@@ -870,6 +870,19 @@ img.gavatar { background: var(--mist); border: 2px solid #fff; box-shadow: 0 0 0
 /* The name and initial in the top bar open My profile */
 a.whoami { text-decoration: none; border-radius: 999px; padding: .2rem .5rem .2rem .2rem; min-height: 44px; }
 a.whoami:hover { background: var(--tactile); }
-a.whoami:hover .avatar { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--harbor); }
+a.whoami:hover .gavatar { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--harbor); }
 a.whoami:focus-visible { outline: 3px solid var(--harbor); outline-offset: 2px; }
 @media (max-width: 52rem) { a.whoami { padding: .2rem; } }
+.gavatar.xl { width: 4.5rem; height: 4.5rem; font-size: 1.9rem; }
+.topbar .gavatar.sm { width: 2rem; height: 2rem; }
+.phead-photo { position: relative; flex: none; align-self: flex-start; }
+.phead-cam {
+  position: absolute; right: -4px; bottom: -4px; width: 32px; height: 32px; min-height: 32px; padding: 0;
+  display: grid; place-items: center; border-radius: 50%; background: #fff; color: var(--harbor);
+  border: 2px solid var(--harbor); box-shadow: 0 1px 4px rgba(0,0,0,.15);
+}
+.phead-cam svg { width: 16px; height: 16px; }
+.phead-cam:hover { background: var(--tactile); }
+.phead-photoacts { display: flex; flex-wrap: wrap; gap: .25rem 1rem; margin: .35rem 0 0; }
+.phead-photoacts .textlink { font-size: .9rem; }
+.phead-hint { font-size: .85rem; margin: .25rem 0 0; }

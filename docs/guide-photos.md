@@ -1,69 +1,44 @@
-# Guide photos: what the backend needs
+# Profile photos (tourists and guides)
 
-The frontend already shows a round "face" for each guide on the match cards and on the tourist's booking cards.
-Today it shows the guide's first initial, because the API has no photo yet. As soon as the API sends a
-`photo_url`, the frontend shows the photo instead. No frontend release is needed for that part.
+**Status:**
+- The backend is on branch `feature/profile-photos-backend`, waiting for review.
+- The frontend is on `feature/frontend-updates`.
 
-## 1. Database
+The frontend works with or without the backend change. Until the backend is merged and deployed, people
+see their initial, and "Add photo" says photos can't be saved yet.
 
-Add one nullable column to `guides` (`backend/app/models/guide.py`), with an Alembic migration:
+## What the backend branch adds
 
-```python
-photo_url: Mapped[str | None] = mapped_column(Text)
-```
+- **Upload:** `PUT /api/v1/users/me/photo` with a `multipart/form-data` field `file`.
+  - It accepts JPEG, PNG or WebP files up to 5 MB.
+  - Otherwise it returns `422`, or `413` if the file is too large.
+  - The photo is turned upright, cropped to a 512×512 square and saved as a JPEG of about 20–60 KB.
+  - EXIF data, which can include the GPS position where the photo was taken, is removed.
+  - It returns the user, including `photo_url`.
+- **Remove:** `DELETE /api/v1/users/me/photo`.
+- **Read:** `GET /api/v1/users/{id}/photo` needs sign-in. It returns the photo when:
+  - the photo is your own;
+  - it belongs to any guide; or
+  - it belongs to a tourist who has booked you.
 
-## 2. Send it to the frontend
+  Everyone else gets `404`.
+- **`photo_url`:** for example `/users/3/photo?v=1795684475`, relative to the API root.
+  It is included in `GET /users/me`, in the guide summaries used by matches and bookings, and in the
+  booking's tourist details.
+- **Storage:** a new `user_photos` table, plus `users.photo_updated_at`, added by migration `a7b8c9d0e1f2`.
+  Photos are kept in the database because Render's disk is wiped on every deploy.
+  No outside storage account is needed.
+- **Dependency:** `pillow` is added to `requirements.txt`.
+- **Tests:** `tests/test_photos.py` covers resizing, EXIF removal, transparent PNGs and refused files.
 
-Add `photo_url: str | None = None` to:
+## To make it live
 
-- `GuideSummary` in `backend/app/schemas/matching.py`. It is used by matches, bookings and itineraries.
-  The frontend reads `guide.photo_url` from match results and from `GET /bookings/...`.
-- `GuideProfileRead`, so the guide sees their own photo on My profile.
+1. Review and merge `feature/profile-photos-backend` into `main`.
+2. Redeploy the API on Render. The start command already runs `alembic upgrade head`.
 
-Fill it from `Guide.photo_url` wherever those schemas are built.
-
-## 3. Upload and remove (the guide's own photo only)
-
-| Method | Path | Body | Returns |
-|---|---|---|---|
-| `PUT` | `/api/v1/guides/me/photo` | `multipart/form-data`, field `file` | `GuideProfileRead` with the new `photo_url` |
-| `DELETE` | `/api/v1/guides/me/photo` | none | `GuideProfileRead` with `photo_url: null` |
-
-Rules for `PUT`:
-
-- **Auth:** only the signed-in guide, for their own profile.
-- **File type:** JPEG, PNG or WebP only. Check the file's real type, not just its extension. Otherwise
-  return `422` with a clear `detail`.
-- **Size:** 5 MB at most, otherwise `413`.
-- **Resize:** if possible, resize to a 512×512 square (crop to the centre) and strip EXIF data.
-  EXIF data can include the GPS location where the photo was taken. Pillow can do both.
-- **Old photo:** replace the old photo, and delete the old file from storage.
-
-## 4. Where the files live
-
-**Not on Render's disk.** It is wiped on every deploy, so photos would disappear.
-Use an object storage service with a free tier and save its public URL in `photo_url`. For example:
-
-- **Cloudinary:** free tier, and it can crop, resize and strip EXIF for you.
-- **Supabase Storage**, or any S3-compatible storage such as Cloudflare R2.
-
-Keep the storage key in Render's environment variables, never in the repo.
-
-## 5. Rules for the photo itself
-
-These are decisions for the team. The frontend is built to match them.
+## Rules the team agreed to follow
 
 - **Optional:** guides without a photo show their initial, and nothing breaks.
-- **Content:** a clear photo of the guide's face, alone, with no logos.
-  The admin can check this when verifying a guide.
+- **Content:** a clear photo of the person's face. The admin can check guides' photos when verifying them.
 - **Ranking:** matching is **not** affected by having a photo. The order stays by match score.
-- **Removal:** the guide can remove their photo at any time.
-
-## 6. Frontend follow-up
-
-Once the API is ready, the frontend adds:
-
-- a photo upload and remove control on the guide's My profile;
-- the photo in the profile header.
-
-Match and booking cards need no change.
+- **Removal:** people can remove their photo at any time.

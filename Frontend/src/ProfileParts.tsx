@@ -1,7 +1,9 @@
-import type { ReactNode } from "react";
+import { useRef, useState, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
+import { ApiError, removeMyPhoto, setMyPhoto } from "./api";
 import { useAuth } from "./AuthContext";
+import Avatar from "./Avatar";
 import type { User } from "./types";
 
 // Simple line icons for the profile rows (24×24, drawn with the text colour)
@@ -18,6 +20,7 @@ const ICONS = {
   key: "M15 7a4 4 0 1 1-3.9 4.9L4 19v2h3v-2h2v-2h2l1.1-1.1A4 4 0 0 1 15 7z",
   logout: "M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9",
   chevron: "M9 6l6 6-6 6",
+  camera: "M4 8h3l2-3h6l2 3h3v11H4zM12 17a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
 };
 export type IconName = keyof typeof ICONS;
 
@@ -29,16 +32,65 @@ export function Icon({ name }: { name: IconName }) {
   );
 }
 
-/** Top of the profile: a large initial, the name, email and account type. */
+/** Top of the profile: the photo (or initial) with add/change/remove, the name, email and account type. */
 export function ProfileHeader({ user, badge }: { user: User; badge?: ReactNode }) {
   const { t } = useTranslation();
+  const { refresh } = useAuth();
+  const input = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState<"up" | "remove" | null>(null);
+  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const has = Boolean(user.photo_url);
+
+  const act = async (kind: "up" | "remove", op: () => Promise<void>, done: string) => {
+    setBusy(kind);
+    setMsg(null);
+    try {
+      await op();
+      await refresh();
+      setMsg({ ok: true, text: t(done) });
+    } catch (e) {
+      const status = e instanceof ApiError ? e.status : 0;
+      setMsg({
+        ok: false,
+        text: status === 404 || status === 405 ? t("pcard.photoUnavailable")
+          : e instanceof ApiError && e.detail ? e.detail : t("pcard.photoFailed"),
+      });
+    } finally {
+      setBusy(null);
+    }
+  };
+  const pick = (files: FileList | null) => {
+    const file = files?.[0];
+    if (input.current) input.current.value = ""; // picking the same file again still counts
+    if (file) act("up", () => setMyPhoto(file), "pcard.photoSaved");
+  };
+
   return (
     <section className="phead">
-      <span className="phead-avatar" aria-hidden="true">{user.display_name.slice(0, 1).toUpperCase()}</span>
+      <div className="phead-photo">
+        <Avatar name={user.display_name} photo={user.photo_url} size="xl" tone="crimson" />
+        <button
+          type="button" className="phead-cam" disabled={busy !== null} onClick={() => input.current?.click()}
+          aria-label={t(has ? "pcard.photoChange" : "pcard.photoAdd")} title={t(has ? "pcard.photoChange" : "pcard.photoAdd")}
+        ><Icon name="camera" /></button>
+        <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => pick(e.target.files)} />
+      </div>
       <div>
         <h2>{user.display_name}</h2>
         <p>{user.email}</p>
         <p className="phead-tags"><span className="pill">{t(`role.${user.role}`)}</span>{badge}</p>
+        <p className="phead-photoacts">
+          <button type="button" className="textlink" disabled={busy !== null} onClick={() => input.current?.click()}>
+            {busy === "up" ? t("pcard.photoUploading") : t(has ? "pcard.photoChange" : "pcard.photoAdd")}
+          </button>
+          {has && (
+            <button type="button" className="textlink" disabled={busy !== null} onClick={() => act("remove", removeMyPhoto, "pcard.photoRemoved")}>
+              {busy === "remove" ? t("pcard.photoRemoving") : t("pcard.photoRemove")}
+            </button>
+          )}
+        </p>
+        {!has && !msg && <p className="muted phead-hint">{t(user.role === "guide" ? "pcard.photoHintGuide" : "pcard.photoHintTourist")}</p>}
+        {msg && <p role={msg.ok ? "status" : "alert"} className={msg.ok ? "muted phead-hint" : "error phead-hint"}>{msg.text}</p>}
       </div>
     </section>
   );
