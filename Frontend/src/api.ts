@@ -136,6 +136,11 @@ export const payBooking = (id: number) => authed(async (tok) => toBooking(tok, a
 /** Asks a guide to take one segment (city) of a trip. */
 export const requestTeamBooking = (segmentId: number, guideId: number) =>
   authed(async (tok) => toBooking(tok, await team.createBooking(tok, segmentId, guideId)));
+/** Asks a guide to take only some days of a segment. */
+export const requestTeamBookingForDays = (segmentId: number, guideId: number, start: string, end: string) =>
+  authed(async (tok) => toBooking(tok, await team.createPartBooking(tok, segmentId, guideId, start, end)));
+export const getCoveragePlan = (segmentId: number) => authed((tok) => team.coveragePlan(tok, segmentId));
+
 
 // ---------- itineraries
 // The team API stores dates and start/end times; the screens think in trip days, a start time and a visit length.

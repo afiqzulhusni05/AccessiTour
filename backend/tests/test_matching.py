@@ -420,3 +420,39 @@ def test_full_day_clashes_with_anything_on_the_same_date():
     micro = booking(ServiceType.MICRO, NOV_4, dt.time(9), dt.time(11))
     assert bookings_overlap(trip, micro)
     assert not bookings_overlap(trip, booking(ServiceType.FULL_DAY, dt.date(2026, 11, 6)))
+
+
+from app.matching import plan_coverage
+
+
+def _plan(guides, start, end):
+    tourist = TouristNeeds(preferred_language="en", languages=["en"])
+    seg = SegmentRequest(
+        region="BUSAN", service_type=ServiceType.FULL_DAY, start_date=start, end_date=end
+    )
+    results, _ = match_guides(tourist, seg, guides)
+    return plan_coverage(seg, results)
+
+
+def test_coverage_uses_one_guide_when_possible():
+    a = guide(1, "A", availability=full_days(NOV_3, NOV_4, NOV_5))
+    plan = _plan([a], NOV_3, NOV_5)
+    assert plan.single_guide
+    assert plan.blocks[0].options[0].guide.id == 1
+
+
+def test_coverage_chains_guides_when_nobody_covers_everything():
+    a = guide(1, "A", availability=full_days(NOV_3, NOV_4))
+    b = guide(2, "B", availability=full_days(NOV_5))
+    plan = _plan([a, b], NOV_3, NOV_5)
+    assert [(x.start_date, x.end_date, x.options[0].guide.id) for x in plan.blocks] == [
+        (NOV_3, NOV_4, 1),
+        (NOV_5, NOV_5, 2),
+    ]
+    assert plan.uncovered_days == []
+
+
+def test_coverage_reports_days_nobody_can_take():
+    a = guide(1, "A", availability=full_days(NOV_3))
+    plan = _plan([a], NOV_3, NOV_5)
+    assert plan.uncovered_days == [NOV_4, NOV_5]

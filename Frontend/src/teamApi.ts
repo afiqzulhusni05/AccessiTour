@@ -266,6 +266,14 @@ export const tripMatches = (token: string, id: number) =>
 
 export const createBooking = (token: string, segmentId: number, guideId: number) =>
   call<TeamBooking>("POST", "/bookings", token, { segment_id: segmentId, guide_id: guideId });
+export interface TeamCoverageOption { guide: TeamGuideSummary; total_score: number; price: number }
+export interface TeamCoverageBlock { start_date: string; end_date: string; days: number; options: TeamCoverageOption[] }
+export interface TeamCoveragePlan { segment_id: number; single_guide: boolean; blocks: TeamCoverageBlock[]; uncovered_days: string[]; total_price: number }
+
+export const coveragePlan = (token: string, segmentId: number) =>
+  call<TeamCoveragePlan>("GET", `/trips/segments/${segmentId}/coverage-plan`, token);
+export const createPartBooking = (token: string, segmentId: number, guideId: number, startDate: string, endDate: string) =>
+  call<TeamBooking>("POST", "/bookings", token, { segment_id: segmentId, guide_id: guideId, start_date: startDate, end_date: endDate });
 export async function myBookings(token: string): Promise<TeamBooking[]> {
   try {
     return await call<TeamBooking[]>("GET", "/bookings/me", token);

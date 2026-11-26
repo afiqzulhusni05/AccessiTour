@@ -6,11 +6,19 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import require_tourist
-from app.matching import SegmentRequest, TouristNeeds, combine_whole_trip, match_guides
+from app.matching import SegmentRequest, TouristNeeds, combine_whole_trip, match_guides, plan_coverage
 from app.deletion_rules import trip_delete_problem
 from app.models import Booking, Tourist, Trip, TripSegment, User
-from app.routers.matching import load_guides, summary
-from app.schemas.matching import ExcludedItem, FactorScoreRead, MatchItem
+from app.enums import BookingStatus, ServiceType
+from app.routers.matching import BLOCKING_STATUSES, load_guides, summary
+from app.schemas.matching import (
+    CoverageBlockRead,
+    CoverageOptionRead,
+    CoveragePlanResponse,
+    ExcludedItem,
+    FactorScoreRead,
+    MatchItem,
+)
 from app.schemas.trip import (
     SegmentMatches,
     SegmentRead,
@@ -209,6 +217,64 @@ def match_trip(
             )
 
     return TripMatchResponse(trip_id=trip.id, segments=segment_lists, whole_trip=whole_trip)
+
+@router.get("/segments/{segment_id}/coverage-plan", response_model=CoveragePlanResponse)
+def segment_coverage_plan(
+    segment_id: int, user: User = Depends(require_tourist), db: Session = Depends(get_db)
+):
+    """When no single guide is free for every day of a segment, suggest a chain of guides.
+    Days already covered by an active booking on this segment are left out."""
+    tourist = get_tourist(db, user)
+    segment = db.get(TripSegment, segment_id)
+    if segment is None or db.get(Trip, segment.trip_id).tourist_id != tourist.id:
+        raise HTTPException(status_code=404, detail="Trip segment not found")
+    if segment.service_type == ServiceType.MICRO:
+        raise HTTPException(status_code=400, detail="A short session is one day and can't be split")
+
+    needs = TouristNeeds(
+        preferred_language=tourist.preferred_language.value,
+        languages=tourist.languages,
+        mobility_level=tourist.mobility_level,
+        gender_preference=tourist.gender_preference,
+    )
+    request = to_segment_request(segment)
+
+    taken: set[dt.date] = set()
+    active = (BookingStatus.REQUESTED, *BLOCKING_STATUSES)
+    for b in db.scalars(
+        select(Booking).where(Booking.segment_id == segment.id, Booking.status.in_(active))
+    ):
+        day = b.start_date
+        while day <= b.end_date:
+            taken.add(day)
+            day += dt.timedelta(days=1)
+
+    candidates, guides_by_id = load_guides(db, segment.start_date, segment.end_date)
+    results, _ = match_guides(needs, request, candidates)
+    plan = plan_coverage(request, results, skip_days=taken)
+
+    return CoveragePlanResponse(
+        segment_id=segment.id,
+        single_guide=plan.single_guide,
+        total_price=plan.total_price,
+        uncovered_days=plan.uncovered_days,
+        blocks=[
+            CoverageBlockRead(
+                start_date=b.start_date,
+                end_date=b.end_date,
+                days=(b.end_date - b.start_date).days + 1,
+                options=[
+                    CoverageOptionRead(
+                        guide=summary(*guides_by_id[o.guide.id]),
+                        total_score=o.score,
+                        price=o.price,
+                    )
+                    for o in b.options
+                ],
+            )
+            for b in plan.blocks
+        ],
+    )
 
 @router.delete("/{trip_id}", status_code=204)
 def delete_trip(trip_id: int, user: User = Depends(require_tourist), db: Session = Depends(get_db)):
