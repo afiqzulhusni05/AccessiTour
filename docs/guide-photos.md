@@ -59,7 +59,7 @@ These are decisions for the team. The frontend is built to match them.
 - **Ranking:** matching is **not** affected by having a photo. The order stays by match score.
 - **Removal:** the guide can remove their photo at any time.
 
-## 6. Frontend follow-up (Naufal)
+## 6. Frontend follow-up
 
 Once the API is ready, the frontend adds:
 
