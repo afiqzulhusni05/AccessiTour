@@ -9,7 +9,6 @@ import { summarize } from "../progress";
 import * as team from "../teamApi";
 import TripProgress from "../TripProgress";
 import type { Booking, Itinerary } from "../types";
-import CoveragePlanner from "../CoveragePlanner";
 
 const OPEN: Booking["status"][] = ["pending", "accepted", "completed"]; // a segment with one of these is taken
 
