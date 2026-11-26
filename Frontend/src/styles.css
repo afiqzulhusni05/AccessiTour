@@ -908,10 +908,11 @@ a.whoami:focus-visible { outline: 3px solid var(--harbor); outline-offset: 2px; 
 @media (max-width: 52rem) { .editbar { bottom: calc(4.75rem + env(safe-area-inset-bottom)); margin-right: 4.5rem; } }
 .profile > .pcard-msg { margin: .5rem 0 0; }
 
-/* Buttons under each stop: compact pills sized to their text (36px tall: still an easy tap, well above WCAG's 24px) */
-.stops .small, .stops a.btn.small { min-height: 36px; padding: .15rem .75rem; font-size: .82rem; }
+/* Buttons under each stop: small pills sized to their text (30px tall: still above WCAG's 24px tap target) */
+.stops .small, .stops a.btn.small { min-height: 30px; padding: .1rem .65rem; font-size: .78rem; border-width: 1.5px; }
 .stops .rowbtns > button, .stops .rowbtns > a, .stops .stopnav li { flex: 0 0 auto; }
 .stops .stopnav a.btn { width: auto; }
-.stops .commentform input { min-height: 36px; padding: .3rem .65rem; font-size: .9rem; }
-.stops .statuspick select { min-height: 36px; }
+.stops .commentform input { min-height: 30px; padding: .2rem .6rem; font-size: .82rem; border-width: 1.5px; }
+.stops .statuspick { font-size: .82rem; }
+.stops .statuspick select { min-height: 30px; padding: .1rem 1.6rem .1rem .5rem; font-size: .82rem; border-width: 1.5px; }
 .stops .stopform .small { min-height: 40px; font-size: .9rem; } /* the edit form keeps larger buttons */
