@@ -866,3 +866,10 @@ img.gavatar { background: var(--mist); border: 2px solid #fff; box-shadow: 0 0 0
 .whohead p { margin: .15rem 0 0; }
 .bookings .row1 { align-items: center; }
 .bookings .row1 h3 { flex: 1; min-width: 0; }
+
+/* The name and initial in the top bar open My profile */
+a.whoami { text-decoration: none; border-radius: 999px; padding: .2rem .5rem .2rem .2rem; min-height: 44px; }
+a.whoami:hover { background: var(--tactile); }
+a.whoami:hover .avatar { box-shadow: 0 0 0 2px #fff, 0 0 0 4px var(--harbor); }
+a.whoami:focus-visible { outline: 3px solid var(--harbor); outline-offset: 2px; }
+@media (max-width: 52rem) { a.whoami { padding: .2rem; } }

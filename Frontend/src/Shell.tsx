@@ -63,10 +63,18 @@ export default function Shell({ user, children }: { user: User; children: ReactN
           {/* pages add their own buttons here (the itinerary chat icon) */}
           <div id="top-actions" />
           <LanguageMenu />
-          <span className="whoami">
-            <span className="avatar" aria-hidden="true">{user.display_name.slice(0, 1).toUpperCase()}</span>
-            <span className="whoami-text">{user.display_name}<small>{t(`role.${user.role}`)}</small></span>
-          </span>
+          {/* the name and initial open My profile (admins have no profile page) */}
+          {user.role === "admin" ? (
+            <span className="whoami">
+              <span className="avatar" aria-hidden="true">{user.display_name.slice(0, 1).toUpperCase()}</span>
+              <span className="whoami-text">{user.display_name}<small>{t(`role.${user.role}`)}</small></span>
+            </span>
+          ) : (
+            <Link to="/profile" className="whoami" aria-label={`${t("nav.profile")}: ${user.display_name}`} title={t("nav.profile")}>
+              <span className="avatar" aria-hidden="true">{user.display_name.slice(0, 1).toUpperCase()}</span>
+              <span className="whoami-text" aria-hidden="true">{user.display_name}<small>{t(`role.${user.role}`)}</small></span>
+            </Link>
+          )}
           <button type="button" className="icon-btn phone-only" onClick={signOut} aria-label={t("auth.signOut")} title={t("auth.signOut")}>
             <Icon name="logout" />
           </button>
