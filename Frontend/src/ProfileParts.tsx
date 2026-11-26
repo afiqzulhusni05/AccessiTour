@@ -32,13 +32,14 @@ export function Icon({ name }: { name: IconName }) {
   );
 }
 
-/** Top of the profile: the photo (or initial) with add/change/remove, the name, email and account type. */
+/** Top of the profile: the photo (or initial), name, email and account type. "Edit" opens add/change/remove photo. */
 export function ProfileHeader({ user, badge }: { user: User; badge?: ReactNode }) {
   const { t } = useTranslation();
   const { refresh } = useAuth();
   const input = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState<"up" | "remove" | null>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
+  const [editing, setEditing] = useState(false);
   const has = Boolean(user.photo_url);
 
   const act = async (kind: "up" | "remove", op: () => Promise<void>, done: string) => {
@@ -69,16 +70,17 @@ export function ProfileHeader({ user, badge }: { user: User; badge?: ReactNode }
     <section className="phead">
       <div className="phead-photo">
         <Avatar name={user.display_name} photo={user.photo_url} size="xl" tone="crimson" />
-        <button
+        {editing && <button
           type="button" className="phead-cam" disabled={busy !== null} onClick={() => input.current?.click()}
           aria-label={t(has ? "pcard.photoChange" : "pcard.photoAdd")} title={t(has ? "pcard.photoChange" : "pcard.photoAdd")}
-        ><Icon name="camera" /></button>
+        ><Icon name="camera" /></button>}
         <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => pick(e.target.files)} />
       </div>
       <div>
         <h2>{user.display_name}</h2>
         <p>{user.email}</p>
         <p className="phead-tags"><span className="pill">{t(`role.${user.role}`)}</span>{badge}</p>
+        {editing && (<>
         <p className="phead-photoacts">
           <button type="button" className="textlink" disabled={busy !== null} onClick={() => input.current?.click()}>
             {busy === "up" ? t("pcard.photoUploading") : t(has ? "pcard.photoChange" : "pcard.photoAdd")}
@@ -90,8 +92,13 @@ export function ProfileHeader({ user, badge }: { user: User; badge?: ReactNode }
           )}
         </p>
         {!has && !msg && <p className="muted phead-hint">{t(user.role === "guide" ? "pcard.photoHintGuide" : "pcard.photoHintTourist")}</p>}
+        </>)}
         {msg && <p role={msg.ok ? "status" : "alert"} className={msg.ok ? "muted phead-hint" : "error phead-hint"}>{msg.text}</p>}
       </div>
+      <button
+        type="button" className="pcard-edit phead-edit" disabled={busy !== null} aria-expanded={editing}
+        onClick={() => { setEditing(!editing); setMsg(null); }}
+      >{t(editing ? "pcard.done" : "pcard.edit")}</button>
     </section>
   );
 }
