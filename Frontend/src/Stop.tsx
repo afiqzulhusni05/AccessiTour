@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import NearestToilet from "./NearestToilet";
 import { StopNav } from "./StopNav";
@@ -102,8 +102,10 @@ export function StopForm({ initial, days, submitLabel, busy, onSubmit, onCancel,
 
 const PROGRESS_MARK: Record<Progress, string> = { upcoming: "○", on_the_way: "→", visited: "✓", skipped: "×" };
 
-export function Stop({ item, prev, next, near, accessNeeds, days, editable, isGuide, canComment, busy, onSave, onDelete, onCheck, onComment, onProgress }: {
+export function Stop({ item, prev, next, near, accessNeeds, days, editable, isGuide, canComment, busy, onSave, onDelete, onCheck, onComment, onProgress, onDragStart }: {
   item: ItineraryItem;
+  /** Pressing the ⠿ handle starts dragging this stop to another time slot (see ItineraryView). */
+  onDragStart?: (e: ReactPointerEvent<HTMLButtonElement>) => void;
   prev?: ItineraryItem; // the stop before this one on the same day, for "directions from the previous stop"
   next?: ItineraryItem; // the stop after this one on the same day, to notice an overlap
   near: string; // the trip's city, to narrow a search by name
@@ -138,6 +140,12 @@ export function Stop({ item, prev, next, near, accessNeeds, days, editable, isGu
       <div className="when">
         <time>{item.start_time}</time>
         {item.duration_min > 0 && <small>{dur(item.duration_min)}</small>}
+        {onDragStart && editable && (
+          <button
+            type="button" className="draghandle" disabled={busy} onPointerDown={onDragStart}
+            aria-label={t("collab.move", { place: item.place_name })} title={t("collab.move", { place: item.place_name })}
+          ><span aria-hidden="true">⠿</span></button>
+        )}
       </div>
       <div>
         {/* Closed, a stop is just its name and description. Opening it shows progress, map links, editing and comments. */}

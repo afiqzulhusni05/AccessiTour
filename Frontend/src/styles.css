@@ -820,3 +820,34 @@ input[type="date"], input[type="time"] { min-width: 0; max-width: 100%; display:
 .pill { background: #f4f0e9; }
 .notice.check { border-color: var(--sand); background: #f7f3ec; }
 .steps li.on { border-color: var(--harbor); } .steps li.done { border-color: var(--tactile); }
+
+/* ---------- Move a stop by dragging it to a time slot ---------- */
+.movehint { font-size: .85rem; margin: .25rem 0 0; }
+.draghandle {
+  margin-top: .2rem; width: 36px; min-height: 36px; padding: 0; justify-content: center;
+  background: transparent; border: 1.5px dashed var(--mist); border-radius: 8px; color: var(--muted);
+  font-size: 1.15rem; line-height: 1; cursor: grab; touch-action: none; user-select: none; -webkit-user-select: none;
+}
+.draghandle:hover, .draghandle:focus-visible { border-color: var(--harbor); color: var(--harbor); background: var(--tactile); }
+.draghandle:active { cursor: grabbing; }
+@media (max-width: 30rem) {
+  .stops .when { grid-auto-flow: column; justify-content: start; align-items: center; gap: .5rem; }
+  .stops .when .draghandle { margin: 0; width: 40px; min-height: 32px; }
+}
+.slotgrid { list-style: none; margin: .5rem 0 0; padding: 0; border: 1px solid var(--mist); border-radius: 12px; overflow: hidden; background: #fff; }
+.slotgrid > li { display: grid; grid-template-columns: 3.5rem 1fr; align-items: center; gap: .5rem; min-height: 38px; padding: .2rem .6rem; border-top: 1px solid #f0f0f0; }
+.slotgrid > li:first-child { border-top: 0; }
+.slotgrid > li > time { font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+.slotgrid > li > div { display: flex; flex-wrap: wrap; gap: .3rem; min-width: 0; }
+.slotgrid > li.over { background: var(--tactile); box-shadow: inset 4px 0 0 var(--harbor); }
+.slotgrid > li.over > time { color: var(--harbor); font-weight: 700; }
+.slotstop { font-size: .82rem; padding: .15rem .55rem; border-radius: 999px; background: #f2f2f2; border: 1px solid var(--mist); overflow-wrap: anywhere; }
+.slotstop.from { opacity: .4; border-style: dashed; }
+.slotstop.to { background: var(--harbor); border-color: var(--harbor); color: #fff; font-weight: 600; }
+.dragghost {
+  position: fixed; z-index: 1000; pointer-events: none; transform: translate(14px, -50%);
+  display: grid; gap: .1rem; max-width: 14rem; padding: .45rem .75rem; border-radius: 10px;
+  background: var(--harbor); color: #fff; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+}
+.dragghost small { opacity: .85; }
+body:has(.dragghost) { user-select: none; -webkit-user-select: none; cursor: grabbing; }
