@@ -20,6 +20,7 @@ class UserRead(BaseModel):
     full_name: str
     role: UserRole
     created_at: datetime
+    photo_url: str | None = None
 
 class LoginRequest(BaseModel):
     email: EmailStr

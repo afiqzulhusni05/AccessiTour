@@ -61,6 +61,7 @@ class FactorScoreRead(BaseModel):
 class GuideSummary(BaseModel):
     id: int
     full_name: str
+    photo_url: str | None = None
     gender: Gender
     languages: list[Language]
     regions: list[Region]

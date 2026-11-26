@@ -122,6 +122,7 @@ def summary(guide: Guide, user: User) -> GuideSummary:
     return GuideSummary(
         id=guide.id,
         full_name=user.full_name,
+        photo_url=user.photo_url,
         gender=guide.gender,
         languages=guide.languages,
         regions=guide.regions,

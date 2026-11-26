@@ -31,6 +31,7 @@ class TouristBrief(BaseModel):
     nationality: str | None
     preferred_language: Language
     mobility_level: MobilityLevel
+    photo_url: str | None = None
 
 
 class BookingRead(BaseModel):

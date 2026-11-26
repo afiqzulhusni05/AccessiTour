@@ -23,3 +23,14 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+    # When the profile photo last changed; null = no photo. The image itself is in user_photos.
+    photo_updated_at: Mapped[datetime | None] = mapped_column(
+        DateTime(timezone=True), nullable=True
+    )
+
+    @property
+    def photo_url(self) -> str | None:
+        """Path of the photo, relative to the API root, with a version so browsers refetch after a change."""
+        if self.photo_updated_at is None:
+            return None
+        return f"/users/{self.id}/photo?v={int(self.photo_updated_at.timestamp())}"

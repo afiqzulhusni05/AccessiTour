@@ -55,6 +55,7 @@ def to_read(db: Session, booking: Booking) -> BookingRead:
         tourist=TouristBrief(
             id=tourist.id,
             full_name=tourist_user.full_name,
+            photo_url=tourist_user.photo_url,
             nationality=tourist.nationality,
             preferred_language=tourist.preferred_language,
             mobility_level=tourist.mobility_level,
