@@ -295,7 +295,7 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
             <ol className="stops">
               {items.map((item, n) => (show !== "all" && item.progress !== show) ? null : (
                 <Stop
-                  key={item.id} item={item} prev={items[n - 1]} next={items[n + 1]} near={t(`region.${it.trip.region}`)} accessNeeds={it.trip.mobility !== "normal"} days={it.days} editable={editable} isGuide={role === "guide"} canComment={role !== null} busy={busy}
+                  key={item.id} item={item} next={items[n + 1]} near={t(`region.${it.trip.region}`)} accessNeeds={it.trip.mobility !== "normal"} days={it.days} editable={editable} isGuide={role === "guide"} canComment={role !== null} busy={busy}
                   onSave={(f, version) => run(() => updateStop(it, { ...item, version }, f))}
                   onDelete={() => run(() => deleteStop(it, item.id))}
                   onCheck={() => run(() => updateStop(it, item, { accessibility_checked: true }))}

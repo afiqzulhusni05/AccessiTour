@@ -102,11 +102,10 @@ export function StopForm({ initial, days, submitLabel, busy, onSubmit, onCancel,
 
 const PROGRESS_MARK: Record<Progress, string> = { upcoming: "○", on_the_way: "→", visited: "✓", skipped: "×" };
 
-export function Stop({ item, prev, next, near, accessNeeds, days, editable, isGuide, canComment, busy, onSave, onDelete, onCheck, onComment, onProgress, onDragStart }: {
+export function Stop({ item, next, near, accessNeeds, days, editable, isGuide, canComment, busy, onSave, onDelete, onCheck, onComment, onProgress, onDragStart }: {
   item: ItineraryItem;
   /** Pressing the ⠿ handle starts dragging this stop to another time slot (see ItineraryView). */
   onDragStart?: (e: ReactPointerEvent<HTMLButtonElement>) => void;
-  prev?: ItineraryItem; // the stop before this one on the same day, for "directions from the previous stop"
   next?: ItineraryItem; // the stop after this one on the same day, to notice an overlap
   near: string; // the trip's city, to narrow a search by name
   accessNeeds: boolean; // the traveller has a mobility need: offer the nearest accessible toilet
@@ -190,8 +189,6 @@ export function Stop({ item, prev, next, near, accessNeeds, days, editable, isGu
         {editing === null && (
           <StopNav
             place={{ name: item.place_name, lat: item.lat, lng: item.lng }} near={near}
-            prev={prev && { name: prev.place_name, lat: prev.lat, lng: prev.lng }}
-            mode={item.transport || undefined}
           />
         )}
         {editing === null && accessNeeds && item.lat !== null && item.lng !== null && (

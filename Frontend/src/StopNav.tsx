@@ -1,5 +1,5 @@
 import { useTranslation } from "react-i18next";
-import { directionsLink, hasCoords, showLink, type Place, type TravelMode } from "./mapLinks";
+import { directionsLink, hasCoords, showLink, type Place } from "./mapLinks";
 
 /** Above the stops: what the Kakao Map links do, and what map apps can't do for accessibility. */
 export function NavNote({ hasNeeds }: { hasNeeds: boolean }) {
@@ -13,15 +13,14 @@ export function NavNote({ hasNeeds }: { hasNeeds: boolean }) {
   );
 }
 
-/** The Kakao Map links under one stop: directions to it from `prev` (the stop before it that day) and from the person's own location. */
-export function StopNav({ place, prev, mode, near }: { place: Place; prev?: Place; mode?: TravelMode; near: string }) {
+/** The Kakao Map link under one stop: directions to it from wherever the person is right now (or a search by name). */
+export function StopNav({ place, near }: { place: Place; near: string }) {
   const { t } = useTranslation();
-  // Kakao's directions page already shows the place on the map, so a separate "Show in Kakao Map" link would
-  // repeat it. With a position: directions from the stop before (when there is one) and from where you are now.
-  // Without one: a search by name.
+  // Every stop works the same: one link, with directions from the person's current location (Kakao Map fills
+  // it in), since during the trip they are rarely exactly at the previous stop. Kakao's directions page also
+  // shows the place on the map. Without a saved position: a search by name.
   const links: [string, string][] = [];
   if (hasCoords(place)) {
-    if (prev && hasCoords(prev)) links.push([t("go.fromPrev", { place: prev.name }), directionsLink(place, prev, mode)!]);
     links.push([t("go.fromHere"), directionsLink(place)!]);
   } else {
     const search = showLink(place, near);
