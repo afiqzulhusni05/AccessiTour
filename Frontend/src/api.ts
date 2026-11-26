@@ -110,7 +110,7 @@ async function toBooking(tok: string, b: team.TeamBooking): Promise<Booking> {
     itineraryId = await team.openItinerary(tok, b.id).then((it) => it.id).catch(() => null); // listed without a link if this fails
   }
   return {
-    id: b.id, status, owner_name: b.tourist.full_name, guide_id: b.guide.id, guide_name: b.guide.full_name, guide_name_ko: "",
+    id: b.id, status, owner_name: b.tourist.full_name, guide_id: b.guide.id, guide_name: b.guide.full_name, guide_name_ko: "", guide_photo: b.guide.photo_url ?? null,
     trip: {
       region: b.region.toLowerCase(), start_date: b.start_date, end_date: b.end_date, party_size: b.group_size,
       languages: [b.tourist.preferred_language], budget_per_day: Math.round(b.total_price / days(b.start_date, b.end_date)),

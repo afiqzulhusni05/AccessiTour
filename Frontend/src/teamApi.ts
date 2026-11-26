@@ -216,6 +216,8 @@ export interface TeamTrip { id: number; title: string | null; start_date: string
 export interface TeamGuideSummary {
   id: number;
   full_name: string;
+  /** The guide's profile photo. Not sent by the API yet (see docs/guide-photos.md); until then the initial is shown. */
+  photo_url?: string | null;
   gender: string;
   languages: string[];
   regions: string[];

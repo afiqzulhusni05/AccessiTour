@@ -71,6 +71,7 @@ const en = {
     check: "Guide accessibility check needed", day: "Day {{n}}", noStops: "No stops yet.",
   },
   teamtrip: {
+    photoOf: "Photo of {{name}}",
     budget: "budget ₩{{amount}}", guidesFor: "Guides for {{city}}", none: "No guide is free and suitable for these dates yet. Try other dates.",
     delete: "Delete trip", deleting: "Deleting…", deleteFailed: "The trip couldn't be deleted. Try again.",
     confirmDelete: "Delete this trip? Its cities, finished bookings and itineraries are deleted too. This can't be undone.",
@@ -510,6 +511,7 @@ const ko: typeof en = {
     check: "가이드 접근성 확인 필요", day: "{{n}}일차", noStops: "아직 일정이 없어요.",
   },
   teamtrip: {
+    photoOf: "{{name}} 사진",
     budget: "예산 ₩{{amount}}", guidesFor: "{{city}} 가이드", none: "이 날짜에 가능한 가이드가 아직 없어요. 다른 날짜를 선택해 보세요.",
     delete: "여행 삭제", deleting: "삭제하는 중…", deleteFailed: "여행을 삭제하지 못했어요. 다시 시도하세요.",
     confirmDelete: "이 여행을 삭제할까요? 도시, 끝난 예약, 일정도 함께 삭제되며 되돌릴 수 없어요.",
@@ -947,6 +949,7 @@ const ms: DeepPartial<typeof en> = {
     check: "Semakan kebolehcapaian oleh pemandu diperlukan", day: "Hari {{n}}", noStops: "Belum ada hentian.",
   },
   teamtrip: {
+    photoOf: "Foto {{name}}",
     budget: "bajet ₩{{amount}}", guidesFor: "Pemandu untuk {{city}}", none: "Belum ada pemandu yang lapang dan sesuai untuk tarikh ini. Cuba tarikh lain.",
     delete: "Padam perjalanan", deleting: "Memadam…", deleteFailed: "Perjalanan tidak dapat dipadam. Cuba lagi.",
     confirmDelete: "Padam perjalanan ini? Bandar, tempahan yang telah tamat dan jadual perjalanannya turut dipadam. Ini tidak boleh dibatalkan.",

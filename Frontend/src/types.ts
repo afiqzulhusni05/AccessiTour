@@ -217,6 +217,7 @@ export interface Booking {
   guide_id: number;
   guide_name: string;
   guide_name_ko: string;
+  guide_photo?: string | null; // the guide's profile photo, when the API sends one
   trip: TouristProfile;
   score: number | null; // match score when the request was sent, 0..1; null for team-API bookings
   created_at: string;

@@ -8,6 +8,7 @@ import { stayDays } from "../multiCity";
 import { summarize } from "../progress";
 import * as team from "../teamApi";
 import TripProgress from "../TripProgress";
+import GuideAvatar from "../GuideAvatar";
 import type { Booking, Itinerary } from "../types";
 
 const OPEN: Booking["status"][] = ["pending", "accepted", "completed"]; // a segment with one of these is taken
@@ -172,11 +173,16 @@ export default function TeamTripPage() {
                   return (
                     <li key={m.guide.id} className="teamguide">
                       <div className="who">
+                        <div className="whohead">
+                          <GuideAvatar name={m.guide.full_name} photo={m.guide.photo_url} size="lg" />
+                          <div>
                         <h3>{m.guide.full_name}{m.guide.verified && <span className="sampletag">{t("teamtrip.verified")}</span>}</h3>
                         <p className="muted">
                           {m.guide.languages.map((l) => t(`lang.${l}`)).join(", ")} · {m.guide.rating_count
                             ? `★ ${m.guide.rating_average.toFixed(1)} (${m.guide.rating_count} ${t("results.reviews")})` : t("results.newGuide")}
                         </p>
+                          </div>
+                        </div>
                         <p className="price">₩{m.estimated_price.toLocaleString()} <small>{t(seg.service_type === "MICRO" ? "teamtrip.forSession" : "teamtrip.forStay")}</small></p>
                         <ul className="reasons">
                           {m.breakdown.map((f) => (

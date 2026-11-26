@@ -852,3 +852,17 @@ input[type="date"], input[type="time"] { min-width: 0; max-width: 100%; display:
 .dragghost small { opacity: .85; }
 body:has(.dragghost) { user-select: none; -webkit-user-select: none; cursor: grabbing; }
 .mapslot { min-height: 22rem; } /* holds the place while the map code loads */
+
+/* ---------- Guide faces: photo, or a tinted initial until the guide uploads one ---------- */
+.gavatar { flex: none; display: grid; place-items: center; border-radius: 50%; object-fit: cover; font-weight: 700; color: #fff; background: var(--harbor); line-height: 1; }
+.gavatar.sm { width: 2rem; height: 2rem; font-size: .95rem; }
+.gavatar.md { width: 2.75rem; height: 2.75rem; font-size: 1.2rem; }
+.gavatar.lg { width: 3.5rem; height: 3.5rem; font-size: 1.5rem; }
+.gavatar.dark { background: var(--crimson-dark); }
+.gavatar.rose { background: var(--tactile); color: var(--crimson-dark); }
+.gavatar.sand { background: var(--sand); color: var(--ink); }
+img.gavatar { background: var(--mist); border: 2px solid #fff; box-shadow: 0 0 0 1px var(--mist); }
+.whohead { display: flex; align-items: center; gap: .85rem; margin-bottom: .35rem; }
+.whohead p { margin: .15rem 0 0; }
+.bookings .row1 { align-items: center; }
+.bookings .row1 h3 { flex: 1; min-width: 0; }
