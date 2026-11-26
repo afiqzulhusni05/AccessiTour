@@ -13,19 +13,21 @@ export function NavNote({ hasNeeds }: { hasNeeds: boolean }) {
   );
 }
 
-/**
- * The Kakao Map links under one stop. Directions start from `prev`, the stop before it that day
- * (or from the person's own location for the first stop), and end at this stop.
- */
+/** The Kakao Map links under one stop: directions to it from `prev` (the stop before it that day) and from the person's own location. */
 export function StopNav({ place, prev, mode, near }: { place: Place; prev?: Place; mode?: TravelMode; near: string }) {
   const { t } = useTranslation();
-  const route = directionsLink(place, prev, mode);
-  const show = showLink(place, near);
-  if (!route && !show) return null; // no position and no name: nothing honest to link to
-  const fromPrev = Boolean(prev && hasCoords(prev) && route);
+  // Kakao's directions page already shows the place on the map, so a separate "Show in Kakao Map" link would
+  // repeat it. With a position: directions from the stop before (when there is one) and from where you are now.
+  // Without one: a search by name.
   const links: [string, string][] = [];
-  if (route) links.push([fromPrev ? t("go.fromPrev", { place: prev!.name }) : t("go.fromHere"), route]);
-  if (show) links.push([t(hasCoords(place) ? "go.show" : "go.search"), show]);
+  if (hasCoords(place)) {
+    if (prev && hasCoords(prev)) links.push([t("go.fromPrev", { place: prev.name }), directionsLink(place, prev, mode)!]);
+    links.push([t("go.fromHere"), directionsLink(place)!]);
+  } else {
+    const search = showLink(place, near);
+    if (search) links.push([t("go.search"), search]);
+  }
+  if (links.length === 0) return null; // no position and no name: nothing honest to link to
   return (
     <div className="stopnav">
       <ul aria-label={t("go.linksFor", { place: place.name })}>

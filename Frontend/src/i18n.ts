@@ -146,7 +146,7 @@ const en = {
     overlap: "Runs past the next stop's start time ({{time}}). Travel time is not included.",
   },
   go: {
-    title: "Getting there", kakaoIntro: "Each stop has Kakao Map links. Directions start at the stop before it that day (or where you are, for the first stop) and end at that stop; choose how you travel in Kakao Map. Directions and navigation happen in Kakao Map, not in AccessiTour.", intro: "Each stop below has links that open it in a map app. Directions and navigation happen in that app, not in AccessiTour.",
+    title: "Getting there", kakaoIntro: "Each stop has Kakao Map links. Directions to a stop start at the stop before it that day, or at where you are now; choose how you travel in Kakao Map. Directions and navigation happen in Kakao Map, not in AccessiTour.", intro: "Each stop below has links that open it in a map app. Directions and navigation happen in that app, not in AccessiTour.",
     app: "Map app", mode: "How you're travelling (default)",
     provider: { naver: "Naver Map", kakao: "Kakao Map" },
     modes: { transit: "Public transport", walk: "Walking", car: "Taxi / car", bicycle: "Bicycle" },
@@ -585,7 +585,7 @@ const ko: typeof en = {
     overlap: "다음 장소 시작 시간({{time}})을 넘겨요. 이동 시간은 포함하지 않았어요.",
   },
   go: {
-    title: "길찾기", kakaoIntro: "각 장소에 카카오맵 링크가 있어요. 길찾기는 그날 바로 앞 장소(첫 장소는 현재 위치)에서 출발해 그 장소에 도착하도록 열려요. 이동 수단은 카카오맵에서 고르세요. 길찾기와 내비게이션은 AccessiTour가 아니라 카카오맵에서 이뤄져요.", intro: "아래 각 장소의 링크를 누르면 지도 앱에서 열려요. 길찾기와 내비게이션은 AccessiTour가 아니라 지도 앱에서 이뤄져요.",
+    title: "길찾기", kakaoIntro: "각 장소에 카카오맵 링크가 있어요. 길찾기는 그날 바로 앞 장소 또는 현재 위치에서 출발해 그 장소에 도착하도록 열려요. 이동 수단은 카카오맵에서 고르세요. 길찾기와 내비게이션은 AccessiTour가 아니라 카카오맵에서 이뤄져요.", intro: "아래 각 장소의 링크를 누르면 지도 앱에서 열려요. 길찾기와 내비게이션은 AccessiTour가 아니라 지도 앱에서 이뤄져요.",
     app: "지도 앱", mode: "이동 수단 (기본)",
     provider: { naver: "네이버 지도", kakao: "카카오맵" },
     modes: { transit: "대중교통", walk: "도보", car: "택시 / 자동차", bicycle: "자전거" },
@@ -1007,7 +1007,7 @@ const ms: DeepPartial<typeof en> = {
     overlap: "Melepasi masa mula hentian seterusnya ({{time}}). Masa perjalanan tidak termasuk.",
   },
   go: {
-    title: "Cara ke sana", kakaoIntro: "Setiap hentian ada pautan Kakao Map. Arah bermula dari hentian sebelumnya pada hari itu (atau lokasi anda, untuk hentian pertama) dan berakhir di hentian itu; pilih cara perjalanan dalam Kakao Map. Arah dan navigasi berlaku dalam Kakao Map, bukan dalam AccessiTour.", intro: "Setiap hentian di bawah ada pautan untuk membukanya dalam aplikasi peta. Arah dan navigasi berlaku dalam aplikasi itu, bukan dalam AccessiTour.",
+    title: "Cara ke sana", kakaoIntro: "Setiap hentian ada pautan Kakao Map. Arah ke sesuatu hentian bermula dari hentian sebelumnya pada hari itu, atau dari lokasi anda sekarang; pilih cara perjalanan dalam Kakao Map. Arah dan navigasi berlaku dalam Kakao Map, bukan dalam AccessiTour.", intro: "Setiap hentian di bawah ada pautan untuk membukanya dalam aplikasi peta. Arah dan navigasi berlaku dalam aplikasi itu, bukan dalam AccessiTour.",
     app: "Aplikasi peta", mode: "Cara anda bergerak (lalai)",
     provider: { naver: "Naver Map", kakao: "Kakao Map" },
     modes: { transit: "Pengangkutan awam", walk: "Berjalan kaki", car: "Teksi / kereta", bicycle: "Basikal" },
