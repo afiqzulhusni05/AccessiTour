@@ -9,7 +9,7 @@ import { Stop } from "./Stop";
 import { NavNote } from "./StopNav";
 import TripProgress from "./TripProgress";
 import { STATES } from "./progress";
-import type { Itinerary, ItineraryItem, Meal, Progress, Role } from "./types";
+import type { Itinerary, ItineraryItem, Meal, Progress, Recommendation, Role } from "./types";
 
 // The map and its drawing library are large, so they load only when an itinerary is opened.
 const TripMap = lazy(() => import("./TripMap"));
@@ -29,7 +29,10 @@ function daySlots(items: ItineraryItem[]): string[] {
   return out;
 }
 type Slot = { day: number; time: string };
-type Drag = { item: ItineraryItem; x: number; y: number; slot: Slot | null };
+/** What is being dragged: a stop already in the plan (moved), or a suggested place (added where it's dropped). */
+type Dragged = { item: ItineraryItem } | { place: Recommendation };
+type Drag = { what: Dragged; name: string; x: number; y: number; slot: Slot | null };
+const NEW_VISIT_MIN = 60; // a suggestion dropped on the timeline starts as a 1-hour visit; Edit changes it
 
 const dayDate = (start: string, day: number) =>
   new Date(Date.parse(start) + (day - 1) * 864e5).toISOString().slice(0, 10);
@@ -106,11 +109,14 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
   };
 
   /**
-   * Drag a stop by its ⠿ handle. After a small movement every day opens into half-hour slots; the slot under the
-   * finger or pointer is where it lands. Near the top or bottom of the screen the page scrolls. Escape cancels.
-   * Only the start time and day change; the visit length stays.
+   * Drag by a ⠿ handle: a stop in the plan, or a suggested place from the map. After a small movement every day
+   * opens into half-hour slots; the slot under the finger or pointer is where it lands. Near the top or bottom of
+   * the screen the page scrolls. Escape cancels. A moved stop keeps its visit length; a dropped suggestion is
+   * added as a 1-hour visit.
    */
-  const startDrag = (item: ItineraryItem, e: ReactPointerEvent<HTMLButtonElement>) => {
+  const startDrag = (what: Dragged, e: ReactPointerEvent<HTMLButtonElement>) => {
+    const item = "item" in what ? what.item : null;
+    const name = item ? item.place_name : (what as { place: Recommendation }).place.place_name;
     if (busy || (e.pointerType === "mouse" && e.button !== 0)) return;
     e.preventDefault();
     const sx = e.clientX, sy = e.clientY;
@@ -122,7 +128,7 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
       const [d, time] = el.dataset.slot!.split("|");
       return { day: +d, time };
     };
-    const update = () => { slot = slotAt(); setDrag({ item, x, y, slot }); };
+    const update = () => { slot = slotAt(); setDrag({ what, name, x, y, slot }); };
     const tick = () => {
       const edge = 90;
       const v = y < edge ? -(edge - y) / 3 : y > innerHeight - edge ? (y - (innerHeight - edge)) / 3 : 0;
@@ -148,8 +154,15 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
       window.removeEventListener("keydown", key);
       setDrag(null);
       const to = slot;
-      if (commit && active && to && (to.day !== item.day_number || to.time !== item.start_time)) {
-        run(() => updateStop(it, item, { day_number: to.day, start_time: to.time }));
+      if (!commit || !active || !to) return;
+      if (item) {
+        if (to.day !== item.day_number || to.time !== item.start_time) run(() => updateStop(it, item, { day_number: to.day, start_time: to.time }));
+      } else {
+        const { place } = what as { place: Recommendation };
+        run(() => addStop(it, {
+          day_number: to.day, start_time: to.time, duration_min: NEW_VISIT_MIN,
+          place_name: place.place_name, activity: place.activity, lat: place.lat, lng: place.lng,
+        }));
       }
     };
     const up = () => stop(true);
@@ -161,12 +174,15 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
     window.addEventListener("keydown", key);
   };
 
-  // When the slots open, scroll so the stop's own slot sits under the finger instead of jumping away.
+  // When the slots open, scroll so the stop's own slot (or, for a suggestion, Day 1 at 09:00) sits under the
+  // finger, instead of the page jumping away.
   const dragging = drag !== null;
   useLayoutEffect(() => {
     if (!drag) return;
-    const t0 = toHhmm(toMin(drag.item.start_time) - (toMin(drag.item.start_time) % SLOT_MIN));
-    const el = document.querySelector<HTMLElement>(`[data-slot="${drag.item.day_number}|${t0}"]`);
+    const from = "item" in drag.what ? drag.what.item : null;
+    const t0 = from ? toHhmm(toMin(from.start_time) - (toMin(from.start_time) % SLOT_MIN)) : "09:00";
+    const el = document.querySelector<HTMLElement>(`[data-slot="${from ? from.day_number : 1}|${t0}"]`)
+      ?? document.querySelector<HTMLElement>("[data-slot]");
     if (el) { const r = el.getBoundingClientRect(); window.scrollBy(0, r.top + r.height / 2 - dragStartY.current); }
   }, [dragging]); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -215,7 +231,7 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
       <p role="alert" className="error sticky">{msg}</p>
 
       <Suspense fallback={<section className="mapslot" aria-busy="true" />}>
-        <TripMap itinerary={it} editable={editable} busy={busy} onAdd={(f) => run(() => addStop(it, f))} />
+        <TripMap itinerary={it} editable={editable} busy={busy} onAdd={(f) => run(() => addStop(it, f))} onDragPlace={(place, e) => startDrag({ place }, e)} />
       </Suspense>
 
       <NavNote hasNeeds={it.trip.mobility !== "normal"} />
@@ -230,7 +246,7 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
       {editable && it.items.length > 0 && <p className="muted movehint">{t("collab.moveHint")}</p>}
       {drag && (
         <div className="dragghost" style={{ left: drag.x, top: drag.y }} aria-hidden="true">
-          <strong>{drag.item.place_name}</strong>
+          <strong>{drag.name}</strong>
           <small>{drag.slot ? t("collab.moveTo", { day: t("itinerary.day", { n: drag.slot.day }), time: drag.slot.time }) : t("collab.dropHere")}</small>
         </div>
       )}
@@ -282,8 +298,8 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
                     <li key={time} data-slot={`${day}|${time}`} className={over ? "over" : ""}>
                       <time>{time}</time>
                       <div>
-                        {here.map((i) => <span key={i.id} className={"slotstop" + (i.id === drag.item.id ? " from" : "")}>{i.start_time !== time && <b>{i.start_time} </b>}{i.place_name}</span>)}
-                        {over && <span className="slotstop to">{drag.item.place_name}</span>}
+                        {here.map((i) => <span key={i.id} className={"slotstop" + ("item" in drag.what && i.id === drag.what.item.id ? " from" : "")}>{i.start_time !== time && <b>{i.start_time} </b>}{i.place_name}</span>)}
+                        {over && <span className="slotstop to">{drag.name}</span>}
                       </div>
                     </li>
                   );
@@ -301,7 +317,7 @@ export default function ItineraryView({ itinerary: it, onChange, role, progressT
                   onCheck={() => run(() => updateStop(it, item, { accessibility_checked: true }))}
                   onComment={(body) => run(() => addComment(it, item.id, body))}
                   onProgress={(next) => track(item, next)}
-                  onDragStart={(e) => startDrag(item, e)}
+                  onDragStart={(e) => startDrag({ item }, e)}
                 />
               ))}
             </ol>

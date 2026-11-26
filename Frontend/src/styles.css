@@ -916,3 +916,11 @@ a.whoami:focus-visible { outline: 3px solid var(--harbor); outline-offset: 2px; 
 .stops .statuspick { font-size: .78rem; }
 .stops .statuspick select { min-height: 26px; height: 26px; padding: 0 1.5rem 0 .45rem; font-size: .78rem; border-width: 1.5px; }
 .stops .stopform .small { min-height: 40px; font-size: .9rem; } /* the edit form keeps larger buttons */
+/* Suggestion cards: ⠿ handle | name and kind | + Add; on phones the button goes under the name */
+.recs li { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; align-items: center; gap: .4rem .75rem; }
+.recs li > div { min-width: 0; }
+.recs .draghandle { margin: 0; }
+@media (max-width: 30rem) {
+  .recs li { grid-template-columns: auto minmax(0, 1fr); }
+  .recs li > .ghost { grid-column: 2; justify-self: start; }
+}

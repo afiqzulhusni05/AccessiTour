@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type PointerEvent as ReactPointerEvent } from "react";
 import { useTranslation } from "react-i18next";
 import L from "leaflet";
 import "leaflet/dist/leaflet.css";
@@ -23,11 +23,13 @@ const label = (text: string) => {
 };
 
 /** Itinerary map: shows the stops, lets the user add a clicked spot or an AI suggestion to the schedule. */
-export default function TripMap({ itinerary: it, editable, busy, onAdd }: {
+export default function TripMap({ itinerary: it, editable, busy, onAdd, onDragPlace }: {
   itinerary: Itinerary;
   editable: boolean;
   busy: boolean;
   onAdd: (f: StopFields) => Promise<boolean>; // true when the server accepted it
+  /** Pressing a suggestion's ⠿ handle starts dragging it onto a time slot in the plan (see ItineraryView). */
+  onDragPlace?: (place: Recommendation, e: ReactPointerEvent<HTMLButtonElement>) => void;
 }) {
   const { t, i18n } = useTranslation();
   const box = useRef<HTMLDivElement>(null);
@@ -227,9 +229,16 @@ export default function TripMap({ itinerary: it, editable, busy, onAdd }: {
               <h3>{t("map.recsTitle")}</h3>
               <p className="muted">{t({ ai: "map.recsAi", tourapi: "map.recsTour", osm: "map.recsOsm", sample: "map.recsSample" }[recs.source])}</p>
               {recs.places.length === 0 && <p>{t("map.noRecs")}</p>}
+              {onDragPlace && recs.places.length > 0 && <p className="muted movehint">{t("map.dragHint")}</p>}
               <ul className="recs">
                 {recs.places.map((r) => (
                   <li key={r.place_name} className={draft?.place_name === r.place_name ? "chosen" : ""}>
+                    {onDragPlace && (
+                      <button
+                        type="button" className="draghandle" disabled={busy} onPointerDown={(e) => onDragPlace(r, e)}
+                        aria-label={t("map.dragPlace", { place: r.place_name })} title={t("map.dragPlace", { place: r.place_name })}
+                      ><span aria-hidden="true">⠿</span></button>
+                    )}
                     <div><strong>{r.place_name}</strong><p>{r.activity}</p></div>
                     <button type="button" className="ghost small" onClick={() => choose(r)} aria-label={`${t("map.addToSchedule")}: ${r.place_name}`}>
                       + {t("map.addToSchedule")}
