@@ -1,9 +1,9 @@
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { getGuideProfile, saveGuideProfile } from "../api";
+import { ApiError, getGuideProfile, saveGuideProfile } from "../api";
 import { useAuth } from "../AuthContext";
 import { Loading } from "../Dash";
-import { AccountCard, InfoRow, ProfileCard, ProfileHeader } from "../ProfileParts";
+import { AccountCard, EditBar, InfoRow, ProfileCard, ProfileHeader, savePhotoChange, type PhotoChange } from "../ProfileParts";
 import GuideFields from "../GuideFields";
 import type { GuideProfileIn } from "../types";
 import { useLoad } from "../useLoad";
@@ -12,10 +12,10 @@ const EMPTY: GuideProfileIn = {
   gender: "FEMALE", bio: "", regions: [], languages: ["ko"], daily_rate: 100000, interests: [], access_tags: [],
 };
 
-/** The profile travellers are matched on. Read-only until the guide presses "Edit profile". */
+/** The profile travellers are matched on, with the guide's photo. Read-only until "Edit profile"; then one form with one Save. */
 export default function GuideProfilePage() {
   const { t } = useTranslation();
-  const { user } = useAuth();
+  const { user, refresh } = useAuth();
   const { data, setData, failed } = useLoad(async () => {
     const mine = await getGuideProfile();
     return { profile: mine as GuideProfileIn | null, verified: mine?.verified ?? false };
@@ -23,6 +23,8 @@ export default function GuideProfilePage() {
   const [edits, setEdits] = useState<GuideProfileIn | null>(null); // non-null while editing
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
+  const [photo, setPhoto] = useState<PhotoChange>(null);
+  const editing = edits !== null;
 
   if (!data) {
     return (
@@ -35,6 +37,10 @@ export default function GuideProfilePage() {
   const saved = data.profile;
   const tags = (xs: string[], ns: string) => xs.map((x) => t(`${ns}.${x}`));
 
+  const start = () => { setMsg(null); setPhoto(null); setEdits(saved ?? EMPTY); };
+  const stop = () => { setEdits(null); setPhoto(null); };
+
+  /** Saves the guide details (when changed), then the photo (the one most likely to be refused). */
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (!edits) return;
@@ -42,23 +48,39 @@ export default function GuideProfilePage() {
     setBusy(true);
     setMsg(null);
     try {
-      await saveGuideProfile(edits);
-      setData({ ...data, profile: edits });
-      setEdits(null);
-      setMsg({ ok: true, text: t("gprofile.saved") });
+      if (JSON.stringify(edits) !== JSON.stringify(saved)) {
+        await saveGuideProfile(edits);
+        setData({ ...data, profile: edits });
+      }
     } catch {
-      setMsg({ ok: false, text: t("gprofile.failed") });
-    } finally {
       setBusy(false);
+      return setMsg({ ok: false, text: t("gprofile.failed") });
     }
+    try {
+      await savePhotoChange(photo);
+    } catch (err) {
+      const why = err instanceof ApiError && (err.status === 404 || err.status === 405) ? t("pcard.photoUnavailable")
+        : err instanceof ApiError && err.detail ? err.detail : t("pcard.photoFailed");
+      setBusy(false);
+      setPhoto(null);
+      return setMsg({ ok: false, text: t("pcard.photoNotSaved", { why }) });
+    }
+    if (photo) await refresh();
+    setBusy(false);
+    stop();
+    setMsg({ ok: true, text: t("pcard.profileSaved") });
   };
 
   return (
-    <div className="page formpage profile">
+    <form className="page formpage profile" onSubmit={submit}>
       <h1>{t("gprofile.title")}</h1>
-      <ProfileHeader user={user!} badge={data.verified ? <span className="pill ok">✓ {t("pcard.verified")}</span> : undefined} />
+      <ProfileHeader
+        user={user!} badge={data.verified ? <span className="pill ok">✓ {t("pcard.verified")}</span> : undefined}
+        editing={editing} onEdit={start} photo={photo} onPhoto={(ph) => { setMsg(null); setPhoto(ph); }}
+      />
+      {!editing && msg && <p role="status" className={"pcard-msg" + (msg.ok ? "" : " error")}>{msg.text}</p>}
 
-      <ProfileCard title={t("pcard.guideDetails")} onEdit={edits || !saved ? undefined : () => { setMsg(null); setEdits(saved); }}>
+      <ProfileCard title={t("pcard.guideDetails")}>
       {!edits ? (
         <>
           {saved ? (
@@ -77,23 +99,15 @@ export default function GuideProfilePage() {
           ) : (
             <>
               <p className="notice check">{t("gprofile.missing")}</p>
-              <button type="button" className="primary" onClick={() => { setMsg(null); setEdits(EMPTY); }}>{t("gprofile.create")}</button>
+              <button type="button" className="primary" onClick={start}>{t("gprofile.create")}</button>
             </>
           )}
-          {msg && <p role="status" className={"pcard-msg" + (msg.ok ? "" : " error")}>{msg.text}</p>}
         </>
       ) : (
-        <form onSubmit={submit}>
-          <GuideFields value={edits} onChange={(next) => { setMsg(null); setEdits(next); }} />
-          <p role={msg && !msg.ok ? "alert" : "status"} className={msg && !msg.ok ? "error" : "muted"}>{busy ? t("auth.waking") : msg?.text}</p>
-          <div className="rowbtns">
-            <button type="submit" className="primary" disabled={busy}>{t("gprofile.save")}</button>
-            <button type="button" className="ghost" onClick={() => { setMsg(null); setEdits(null); }}>{t("collab.cancel")}</button>
-          </div>
-        </form>
+        <GuideFields value={edits} onChange={(next) => { setMsg(null); setEdits(next); }} />
       )}
       </ProfileCard>
-      <AccountCard />
-    </div>
+      {editing ? <EditBar busy={busy} msg={msg} onCancel={() => { setMsg(null); stop(); }} /> : <AccountCard />}
+    </form>
   );
 }

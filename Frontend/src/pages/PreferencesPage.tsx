@@ -1,102 +1,131 @@
 import { useState, type FormEvent } from "react";
 import { useTranslation } from "react-i18next";
-import { getPreferences, savePreferences } from "../api";
+import { ApiError, getEmergencyCard, getPreferences, saveEmergencyCard, savePreferences } from "../api";
 import { useAuth } from "../AuthContext";
 import { Loading } from "../Dash";
-import EmergencyCardSection, { GenderPicker } from "../EmergencyCard";
+import EmergencyCardSection, { GenderPicker, phoneOk } from "../EmergencyCard";
 import MultiSelect from "../MultiSelect";
 import { DIETARY, LANGS, MOBILITY } from "../options";
-import type { TripPreferences } from "../types";
+import type { EmergencyCard, TripPreferences } from "../types";
 import { useLoad } from "../useLoad";
-import { AccountCard, InfoRow, ProfileCard, ProfileHeader } from "../ProfileParts";
+import { AccountCard, EditBar, InfoRow, ProfileCard, ProfileHeader, savePhotoChange, type PhotoChange } from "../ProfileParts";
+
+const same = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
 
 /**
- * A tourist's profile: account details plus the saved accessibility, language and food preferences that
- * start every new trip (kept in the team API's tourist profile). Read-only until "Edit profile" is pressed.
+ * A tourist's profile: photo, the saved accessibility, language and food preferences that start every new trip,
+ * and the emergency card (all kept in the team API's tourist profile). Read-only until "Edit profile"; then the
+ * whole page is one form with one Save.
  */
 export default function PreferencesPage() {
   const { t } = useTranslation();
-  const user = useAuth().user!;
-  const { data: saved, setData: setSaved, failed } = useLoad(getPreferences);
-  const [draft, setDraft] = useState<TripPreferences | null>(null); // non-null while editing
+  const { user, refresh } = useAuth();
+  const prefs = useLoad(getPreferences);
+  const card = useLoad(getEmergencyCard);
+  const [editing, setEditing] = useState(false);
+  const [prefDraft, setPrefDraft] = useState<TripPreferences | null>(null);
+  const [cardDraft, setCardDraft] = useState<EmergencyCard | null>(null);
+  const [photo, setPhoto] = useState<PhotoChange>(null);
   const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
   const [busy, setBusy] = useState(false);
 
-  if (!saved) return <div className="page"><h1>{t("nav.profile")}</h1><Loading failed={failed} /></div>;
-  const p = draft ?? saved;
-  const set = (changes: Partial<TripPreferences>) => { setMsg(null); setDraft({ ...p, ...changes }); };
+  if (!prefs.data) return <div className="page"><h1>{t("nav.profile")}</h1><Loading failed={prefs.failed} /></div>;
+  const saved = prefs.data;
+  const p = prefDraft ?? saved;
+  const set = (changes: Partial<TripPreferences>) => { setMsg(null); setPrefDraft({ ...p, ...changes }); };
   const tags = (xs: string[], ns: string) => xs.map((x) => t(`${ns}.${x}`));
 
+  const start = () => {
+    setMsg(null);
+    setPrefDraft(saved);
+    setCardDraft(card.data ?? null);
+    setPhoto(null);
+    setEditing(true);
+  };
+  const stop = () => { setEditing(false); setPrefDraft(null); setCardDraft(null); setPhoto(null); };
+
+  /** Saves only what changed: preferences, emergency card, then the photo (the one most likely to be refused). */
   const submit = async (e: FormEvent) => {
     e.preventDefault();
     if (p.languages.length === 0) return setMsg({ ok: false, text: t("err.language") });
+    if (cardDraft && !phoneOk(cardDraft.contact_phone)) return setMsg({ ok: false, text: t("card.badPhone") });
     setBusy(true);
+    setMsg(null);
     try {
-      setSaved(await savePreferences(p));
-      setDraft(null);
-      setMsg({ ok: true, text: t("prefs.saved") });
+      if (!same(p, saved)) prefs.setData(await savePreferences(p));
+      if (cardDraft && !same(cardDraft, card.data)) card.setData(await saveEmergencyCard(cardDraft));
     } catch {
-      setMsg({ ok: false, text: t("prefs.failed") });
-    } finally {
       setBusy(false);
+      return setMsg({ ok: false, text: t("prefs.failed") });
     }
+    try {
+      await savePhotoChange(photo);
+    } catch (err) {
+      const why = err instanceof ApiError && (err.status === 404 || err.status === 405) ? t("pcard.photoUnavailable")
+        : err instanceof ApiError && err.detail ? err.detail : t("pcard.photoFailed");
+      setBusy(false);
+      setPhoto(null);
+      return setMsg({ ok: false, text: t("pcard.photoNotSaved", { why }) });
+    }
+    if (photo) await refresh();
+    setBusy(false);
+    stop();
+    setMsg({ ok: true, text: t("pcard.profileSaved") });
   };
 
-  const edit = () => { setMsg(null); setDraft(saved); };
   return (
-    <div className="page formpage profile">
+    <form className="page formpage profile" onSubmit={submit}>
       <h1>{t("nav.profile")}</h1>
-      <ProfileHeader user={user} />
+      <ProfileHeader user={user!} editing={editing} onEdit={start} photo={photo} onPhoto={(ph) => { setMsg(null); setPhoto(ph); }} />
+      {!editing && msg && <p role="status" className={"pcard-msg" + (msg.ok ? "" : " error")}>{msg.text}</p>}
 
-      <ProfileCard title={t("prefs.title")} onEdit={draft ? undefined : edit}>
-      {!draft ? (
-        <>
-          <p className="muted pcard-intro">{t("prefs.intro")}</p>
-          <ul className="infolist">
-            <InfoRow icon="mobility" label={t("needs.mobility")} value={(t(`mobility.${p.mobility}`) as unknown as string[])[0]} />
-            <InfoRow icon="language" label={t("trip.language")} tags={tags(p.languages, "lang")} />
-            <InfoRow icon="food" label={t("needs.dietary")} tags={tags(p.dietary, "diet")} />
-            <InfoRow icon="person" label={t("card.genderPref")} value={t(`card.gender.${p.gender_preference ?? "any"}`)} />
-          </ul>
-          {msg && <p role="status" className={"pcard-msg" + (msg.ok ? "" : " error")}>{msg.text}</p>}
-        </>
-      ) : (
-      <form onSubmit={submit}>
-        <fieldset>
-          <legend>{t("needs.mobility")}</legend>
-          <div className="optgrid">
-          {MOBILITY.map((m) => {
-            const [name, desc] = t(`mobility.${m}`) as unknown as string[];
-            return (
-              <label key={m} className={"option" + (p.mobility === m ? " picked" : "")}>
-                <input type="radio" name="mobility" checked={p.mobility === m} onChange={() => set({ mobility: m })} />
-                <span><strong>{name}</strong><small>{desc}</small></span>
-              </label>
-            );
-          })}
-          </div>
-        </fieldset>
-        <MultiSelect
-          label={t("trip.language")} options={LANGS} value={p.languages}
-          onChange={(v) => set({ languages: v })} optionLabel={(l) => t(`lang.${l}`)}
-        />
-        <MultiSelect
-          label={t("needs.dietary")} options={DIETARY} value={p.dietary}
-          onChange={(v) => set({ dietary: v })} optionLabel={(x) => t(`diet.${x}`)}
-        />
-        <GenderPicker value={p.gender_preference ?? "any"} onChange={(g) => set({ gender_preference: g })} />
-        <p role={msg && !msg.ok ? "alert" : "status"} className={msg && !msg.ok ? "error" : ""}>{msg?.text}</p>
-        <div className="rowbtns">
-          <button type="submit" className="primary" disabled={busy}>{t("prefs.save")}</button>
-          <button type="button" className="ghost" onClick={() => { setMsg(null); setDraft(null); }}>{t("collab.cancel")}</button>
-        </div>
-      </form>
-      )}
-
+      <ProfileCard title={t("prefs.title")}>
+        {!editing ? (
+          <>
+            <p className="muted pcard-intro">{t("prefs.intro")}</p>
+            <ul className="infolist">
+              <InfoRow icon="mobility" label={t("needs.mobility")} value={(t(`mobility.${p.mobility}`) as unknown as string[])[0]} />
+              <InfoRow icon="language" label={t("trip.language")} tags={tags(p.languages, "lang")} />
+              <InfoRow icon="food" label={t("needs.dietary")} tags={tags(p.dietary, "diet")} />
+              <InfoRow icon="person" label={t("card.genderPref")} value={t(`card.gender.${p.gender_preference ?? "any"}`)} />
+            </ul>
+          </>
+        ) : (
+          <>
+            <fieldset>
+              <legend>{t("needs.mobility")}</legend>
+              <div className="optgrid">
+                {MOBILITY.map((m) => {
+                  const [name, desc] = t(`mobility.${m}`) as unknown as string[];
+                  return (
+                    <label key={m} className={"option" + (p.mobility === m ? " picked" : "")}>
+                      <input type="radio" name="mobility" checked={p.mobility === m} onChange={() => set({ mobility: m })} />
+                      <span><strong>{name}</strong><small>{desc}</small></span>
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+            <MultiSelect
+              label={t("trip.language")} options={LANGS} value={p.languages}
+              onChange={(v) => set({ languages: v })} optionLabel={(l) => t(`lang.${l}`)}
+            />
+            <MultiSelect
+              label={t("needs.dietary")} options={DIETARY} value={p.dietary}
+              onChange={(v) => set({ dietary: v })} optionLabel={(x) => t(`diet.${x}`)}
+            />
+            <GenderPicker value={p.gender_preference ?? "any"} onChange={(g) => set({ gender_preference: g })} />
+          </>
+        )}
       </ProfileCard>
 
-      <EmergencyCardSection />
-      <AccountCard />
-    </div>
+      <EmergencyCardSection
+        saved={card.data ?? null} failed={card.failed}
+        draft={editing ? cardDraft : null} onChange={(c) => { setMsg(null); setCardDraft(c); }}
+        onStart={start}
+      />
+
+      {editing ? <EditBar busy={busy} msg={msg} onCancel={() => { setMsg(null); stop(); }} /> : <AccountCard />}
+    </form>
   );
 }

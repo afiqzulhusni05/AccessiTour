@@ -329,7 +329,7 @@ const en = {
     pending: "Pending requests", total: "Bookings", acceptedTile: "Accepted bookings",
   },
   pcard: {
-    done: "Done",     photoAdd: "Add photo", photoChange: "Change photo", photoRemove: "Remove photo", photoUploading: "Uploading…", photoRemoving: "Removing…", photoSaved: "Photo saved.", photoRemoved: "Photo removed.", photoFailed: "The photo couldn't be saved. Try again.", photoUnavailable: "Photos can't be saved yet. Try again later.", photoHintTourist: "Optional. A clear photo of your face helps your guide find you on the day.", photoHintGuide: "Optional. A clear photo of your face helps travellers choose you and find you on the day.",
+    editProfile: "Edit profile", saveProfile: "Save profile", saving: "Saving…", profileSaved: "Profile saved.", photoNotSaved: "Your other changes were saved, but the photo wasn't: {{why}}", done: "Done",     photoAdd: "Add photo", photoChange: "Change photo", photoRemove: "Remove photo", photoUploading: "Uploading…", photoRemoving: "Removing…", photoSaved: "Photo saved.", photoRemoved: "Photo removed.", photoFailed: "The photo couldn't be saved. Try again.", photoUnavailable: "Photos can't be saved yet. Try again later.", photoHintTourist: "Optional. A clear photo of your face helps your guide find you on the day.", photoHintGuide: "Optional. A clear photo of your face helps travellers choose you and find you on the day.",
     edit: "Edit", notSet: "Not set", account: "Account", changePassword: "Change password",
     changePasswordHint: "We'll email you a link to set a new one", verified: "Verified", guideDetails: "Guide details",
   },
@@ -770,7 +770,7 @@ const ko: typeof en = {
     pending: "대기 중인 요청", total: "예약", acceptedTile: "수락된 예약",
   },
   pcard: {
-    done: "완료",     photoAdd: "사진 추가", photoChange: "사진 변경", photoRemove: "사진 삭제", photoUploading: "올리는 중…", photoRemoving: "삭제하는 중…", photoSaved: "사진을 저장했어요.", photoRemoved: "사진을 삭제했어요.", photoFailed: "사진을 저장하지 못했어요. 다시 시도하세요.", photoUnavailable: "아직 사진을 저장할 수 없어요. 나중에 다시 시도하세요.", photoHintTourist: "선택 사항이에요. 얼굴이 잘 보이는 사진이 있으면 가이드가 당일에 쉽게 찾을 수 있어요.", photoHintGuide: "선택 사항이에요. 얼굴이 잘 보이는 사진이 있으면 여행자가 가이드를 고르고 당일에 찾기 쉬워요.",
+    editProfile: "프로필 수정", saveProfile: "프로필 저장", saving: "저장하는 중…", profileSaved: "프로필을 저장했어요.", photoNotSaved: "다른 변경 사항은 저장했지만 사진은 저장하지 못했어요: {{why}}", done: "완료",     photoAdd: "사진 추가", photoChange: "사진 변경", photoRemove: "사진 삭제", photoUploading: "올리는 중…", photoRemoving: "삭제하는 중…", photoSaved: "사진을 저장했어요.", photoRemoved: "사진을 삭제했어요.", photoFailed: "사진을 저장하지 못했어요. 다시 시도하세요.", photoUnavailable: "아직 사진을 저장할 수 없어요. 나중에 다시 시도하세요.", photoHintTourist: "선택 사항이에요. 얼굴이 잘 보이는 사진이 있으면 가이드가 당일에 쉽게 찾을 수 있어요.", photoHintGuide: "선택 사항이에요. 얼굴이 잘 보이는 사진이 있으면 여행자가 가이드를 고르고 당일에 찾기 쉬워요.",
     edit: "수정", notSet: "설정 안 됨", account: "계정", changePassword: "비밀번호 변경",
     changePasswordHint: "새 비밀번호를 정할 수 있는 링크를 이메일로 보내 드려요", verified: "인증됨", guideDetails: "가이드 정보",
   },
@@ -1190,7 +1190,7 @@ const ms: DeepPartial<typeof en> = {
     pending: "Permohonan menunggu", total: "Tempahan", acceptedTile: "Tempahan diterima",
   },
   pcard: {
-    done: "Selesai",     photoAdd: "Tambah foto", photoChange: "Tukar foto", photoRemove: "Buang foto", photoUploading: "Memuat naik…", photoRemoving: "Membuang…", photoSaved: "Foto disimpan.", photoRemoved: "Foto dibuang.", photoFailed: "Foto tidak dapat disimpan. Cuba lagi.", photoUnavailable: "Foto belum boleh disimpan. Cuba lagi nanti.", photoHintTourist: "Pilihan. Foto wajah yang jelas membantu pemandu anda mencari anda pada hari itu.", photoHintGuide: "Pilihan. Foto wajah yang jelas membantu pelancong memilih anda dan mencari anda pada hari itu.",
+    editProfile: "Sunting profil", saveProfile: "Simpan profil", saving: "Menyimpan…", profileSaved: "Profil disimpan.", photoNotSaved: "Perubahan lain disimpan, tetapi foto tidak: {{why}}", done: "Selesai",     photoAdd: "Tambah foto", photoChange: "Tukar foto", photoRemove: "Buang foto", photoUploading: "Memuat naik…", photoRemoving: "Membuang…", photoSaved: "Foto disimpan.", photoRemoved: "Foto dibuang.", photoFailed: "Foto tidak dapat disimpan. Cuba lagi.", photoUnavailable: "Foto belum boleh disimpan. Cuba lagi nanti.", photoHintTourist: "Pilihan. Foto wajah yang jelas membantu pemandu anda mencari anda pada hari itu.", photoHintGuide: "Pilihan. Foto wajah yang jelas membantu pelancong memilih anda dan mencari anda pada hari itu.",
     edit: "Sunting", notSet: "Belum ditetapkan", account: "Akaun", changePassword: "Tukar kata laluan",
     changePasswordHint: "Kami akan e-melkan pautan untuk menetapkan kata laluan baharu", verified: "Disahkan", guideDetails: "Butiran pemandu",
   },

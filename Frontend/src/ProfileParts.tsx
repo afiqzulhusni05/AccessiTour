@@ -1,7 +1,7 @@
-import { useRef, useState, type ReactNode } from "react";
+import { useRef, type ReactNode } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useTranslation } from "react-i18next";
-import { ApiError, removeMyPhoto, setMyPhoto } from "./api";
+import { removeMyPhoto, setMyPhoto } from "./api";
 import { useAuth } from "./AuthContext";
 import Avatar from "./Avatar";
 import type { User } from "./types";
@@ -32,46 +32,34 @@ export function Icon({ name }: { name: IconName }) {
   );
 }
 
-/** Top of the profile: the photo (or initial), name, email and account type. "Edit" opens add/change/remove photo. */
-export function ProfileHeader({ user, badge }: { user: User; badge?: ReactNode }) {
-  const { t } = useTranslation();
-  const { refresh } = useAuth();
-  const input = useRef<HTMLInputElement>(null);
-  const [busy, setBusy] = useState<"up" | "remove" | null>(null);
-  const [msg, setMsg] = useState<{ ok: boolean; text: string } | null>(null);
-  const [editing, setEditing] = useState(false);
-  const has = Boolean(user.photo_url);
+/** A photo change waiting for "Save": a newly picked file, or removing the current photo. */
+export type PhotoChange = { file: File; preview: string } | "remove" | null;
 
-  const act = async (kind: "up" | "remove", op: () => Promise<void>, done: string) => {
-    setBusy(kind);
-    setMsg(null);
-    try {
-      await op();
-      await refresh();
-      setMsg({ ok: true, text: t(done) });
-    } catch (e) {
-      const status = e instanceof ApiError ? e.status : 0;
-      setMsg({
-        ok: false,
-        text: status === 404 || status === 405 ? t("pcard.photoUnavailable")
-          : e instanceof ApiError && e.detail ? e.detail : t("pcard.photoFailed"),
-      });
-    } finally {
-      setBusy(null);
-    }
-  };
+/**
+ * Top of the profile: the photo (or initial), name, email and account type, and the page's one "Edit profile"
+ * button. While editing, the photo can be added, changed or removed; nothing is sent until the page saves.
+ */
+export function ProfileHeader({ user, badge, editing, onEdit, photo, onPhoto }: {
+  user: User; badge?: ReactNode;
+  editing: boolean; onEdit: () => void;
+  photo: PhotoChange; onPhoto: (p: PhotoChange) => void;
+}) {
+  const { t } = useTranslation();
+  const input = useRef<HTMLInputElement>(null);
+  const shown = photo === "remove" ? null : photo ? photo.preview : user.photo_url;
+  const has = Boolean(shown);
   const pick = (files: FileList | null) => {
     const file = files?.[0];
     if (input.current) input.current.value = ""; // picking the same file again still counts
-    if (file) act("up", () => setMyPhoto(file), "pcard.photoSaved");
+    if (file) onPhoto({ file, preview: URL.createObjectURL(file) });
   };
 
   return (
     <section className="phead">
       <div className="phead-photo">
-        <Avatar name={user.display_name} photo={user.photo_url} size="xl" tone="crimson" />
+        <Avatar name={user.display_name} photo={shown} size="xl" tone="crimson" />
         {editing && <button
-          type="button" className="phead-cam" disabled={busy !== null} onClick={() => input.current?.click()}
+          type="button" className="phead-cam" onClick={() => input.current?.click()}
           aria-label={t(has ? "pcard.photoChange" : "pcard.photoAdd")} title={t(has ? "pcard.photoChange" : "pcard.photoAdd")}
         ><Icon name="camera" /></button>}
         <input ref={input} type="file" accept="image/jpeg,image/png,image/webp" hidden onChange={(e) => pick(e.target.files)} />
@@ -80,26 +68,36 @@ export function ProfileHeader({ user, badge }: { user: User; badge?: ReactNode }
         <h2>{user.display_name}</h2>
         <p>{user.email}</p>
         <p className="phead-tags"><span className="pill">{t(`role.${user.role}`)}</span>{badge}</p>
+        {!editing && <button type="button" className="ghost small phead-editbtn" onClick={onEdit}>{t("pcard.editProfile")}</button>}
         {editing && (<>
-        <p className="phead-photoacts">
-          <button type="button" className="textlink" disabled={busy !== null} onClick={() => input.current?.click()}>
-            {busy === "up" ? t("pcard.photoUploading") : t(has ? "pcard.photoChange" : "pcard.photoAdd")}
-          </button>
-          {has && (
-            <button type="button" className="textlink" disabled={busy !== null} onClick={() => act("remove", removeMyPhoto, "pcard.photoRemoved")}>
-              {busy === "remove" ? t("pcard.photoRemoving") : t("pcard.photoRemove")}
-            </button>
-          )}
-        </p>
-        {!has && !msg && <p className="muted phead-hint">{t(user.role === "guide" ? "pcard.photoHintGuide" : "pcard.photoHintTourist")}</p>}
+          <p className="phead-photoacts">
+            <button type="button" className="textlink" onClick={() => input.current?.click()}>{t(has ? "pcard.photoChange" : "pcard.photoAdd")}</button>
+            {has && <button type="button" className="textlink" onClick={() => onPhoto(user.photo_url ? "remove" : null)}>{t("pcard.photoRemove")}</button>}
+          </p>
+          {!has && <p className="muted phead-hint">{t(user.role === "guide" ? "pcard.photoHintGuide" : "pcard.photoHintTourist")}</p>}
         </>)}
-        {msg && <p role={msg.ok ? "status" : "alert"} className={msg.ok ? "muted phead-hint" : "error phead-hint"}>{msg.text}</p>}
       </div>
-      <button
-        type="button" className="pcard-edit phead-edit" disabled={busy !== null} aria-expanded={editing}
-        onClick={() => { setEditing(!editing); setMsg(null); }}
-      >{t(editing ? "pcard.done" : "pcard.edit")}</button>
     </section>
+  );
+}
+
+/** Sends a held photo change; nothing when there is none. */
+export async function savePhotoChange(photo: PhotoChange) {
+  if (photo === "remove") await removeMyPhoto();
+  else if (photo) await setMyPhoto(photo.file);
+}
+
+/** The one Save / Cancel for an edited profile, kept in view at the bottom of the screen. */
+export function EditBar({ busy, msg, onCancel }: { busy: boolean; msg: { ok: boolean; text: string } | null; onCancel: () => void }) {
+  const { t } = useTranslation();
+  return (
+    <div className="editbar">
+      {msg && <p role={msg.ok ? "status" : "alert"} className={msg.ok ? "muted" : "error"}>{msg.text}</p>}
+      <div className="rowbtns">
+        <button type="submit" className="primary" disabled={busy}>{busy ? t("pcard.saving") : t("pcard.saveProfile")}</button>
+        <button type="button" className="ghost" disabled={busy} onClick={onCancel}>{t("collab.cancel")}</button>
+      </div>
+    </div>
   );
 }
 
