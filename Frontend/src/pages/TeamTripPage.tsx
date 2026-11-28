@@ -8,13 +8,9 @@ import { stayDays } from "../multiCity";
 import { summarize } from "../progress";
 import * as team from "../teamApi";
 import TripProgress from "../TripProgress";
-import Avatar from "../Avatar";
+import type { Booking, Itinerary } from "../types";
 import GuideCalendar from "../GuideCalendar";
 import CoveragePlanner from "../CoveragePlanner";
-import type { Booking, Itinerary } from "../types";
-
-/** The guide isn't free on every day of the stay, so they can't be requested for it. */
-const isPartly = (m: team.TeamMatch) => m.breakdown.some((f) => f.factor === "availability" && f.score < 1);
 
 const OPEN: Booking["status"][] = ["pending", "accepted", "completed"]; // a segment with one of these is taken
 
@@ -34,7 +30,7 @@ export default function TeamTripPage() {
   const [tab, setTab] = useState(0);
   const [busy, setBusy] = useState<number | null>(null); // guide being requested
   const [msg, setMsg] = useState("");
-  const [calFor, setCalFor] = useState<string | null>(null); // "segment:guide" whose availability calendar is open
+  const [missing, setMissing] = useState<Record<string, string[]>>({}); // "segment:guide" -> days the guide isn't free
 
   const load = useCallback(async () => {
     const tok = teamToken()!;
@@ -62,11 +58,24 @@ export default function TeamTripPage() {
   if (!trip) return <div className="page wide"><p role="status">{t("multi.loading")}</p></div>;
 
   const city = (s: team.TeamSegment) => t(`region.${s.region.toLowerCase()}`);
-  const bookingFor = (s: team.TeamSegment) =>
-    [...bookings].sort((a, b) => b.id - a.id).find((b) => b.team?.segment_id === s.id && OPEN.includes(b.status));
+  const bookingsFor = (s: team.TeamSegment) =>
+    bookings.filter((b) => b.team?.segment_id === s.id && OPEN.includes(b.status))
+      .sort((a, b) => a.trip.start_date.localeCompare(b.trip.start_date));
+  const bookingFor = (s: team.TeamSegment) => bookingsFor(s)[0]; // used by the tab labels
+  const hasGaps = (s: team.TeamSegment) => {
+    const covered = new Set<string>();
+    for (const b of bookingsFor(s)) {
+      for (let d = new Date(b.trip.start_date); d <= new Date(b.trip.end_date); d.setDate(d.getDate() + 1)) covered.add(d.toISOString().slice(0, 10));
+    }
+    for (let d = new Date(s.start_date); d <= new Date(s.end_date); d.setDate(d.getDate() + 1)) {
+      if (!covered.has(d.toISOString().slice(0, 10))) return true;
+    }
+    return false;
+  };
+
   const turnedDown = (s: team.TeamSegment) =>
     bookings.filter((b) => b.team?.segment_id === s.id && (b.status === "declined" || b.status === "cancelled"));
-  /** Every open booking for a segment, by date: a long stay can be shared between guides. */
+    /** Every open booking for a segment, by date: a long stay can be shared between guides. */
   const bookingsFor = (s: team.TeamSegment) =>
     bookings.filter((b) => b.team?.segment_id === s.id && OPEN.includes(b.status))
       .sort((a, b) => a.team!.start_date.localeCompare(b.team!.start_date));
@@ -96,6 +105,25 @@ export default function TeamTripPage() {
     const to = (tab + step + trip.segments.length) % trip.segments.length;
     setTab(to);
     document.getElementById(`segtab-${to}`)?.focus();
+  };
+
+  /**
+   * Which days of the stay a guide hasn't marked as free, looked up when asked: for full days, 6+ free hours
+   * that day; for a short session, one free stretch covering its hours.
+   */
+  const showMissing = async (s: team.TeamSegment, m: team.TeamMatch) => {
+    const slots = await team.guideAvailability(teamToken()!, m.guide.id, s.start_date, s.end_date).catch(() => null);
+    if (!slots) return;
+    const hours = (x: team.TeamSlot) => (Date.parse(`2000-01-01T${x.end_time.slice(0, 5)}`) - Date.parse(`2000-01-01T${x.start_time.slice(0, 5)}`)) / 36e5;
+    const days: string[] = [];
+    for (let d = new Date(`${s.start_date}T00:00`); d <= new Date(`${s.end_date}T00:00`); d.setDate(d.getDate() + 1)) {
+      const day = d.toLocaleDateString("sv");
+      const fits = (x: team.TeamSlot) => (s.service_type === "MICRO" && s.start_time && s.end_time
+        ? x.start_time.slice(0, 5) <= s.start_time.slice(0, 5) && x.end_time.slice(0, 5) >= s.end_time.slice(0, 5)
+        : hours(x) >= 6);
+      if (!slots.some((x) => x.date === day && fits(x))) days.push(day);
+    }
+    setMissing((prev) => ({ ...prev, [`${s.id}:${m.guide.id}`]: days }));
   };
 
   const shortDate = (d: string) => new Date(`${d}T00:00`).toLocaleDateString(i18n.language, { month: "short", day: "numeric" });
@@ -152,10 +180,13 @@ export default function TeamTripPage() {
           {seg.budget ? ` · ${t("teamtrip.budget", { amount: seg.budget.toLocaleString() })}` : ""}
         </p>
 
-        {itinerary ? (
-          <ItineraryView key={itinerary.id} itinerary={itinerary} onChange={onItinerary} role="tourist"
-            progressTitle={multi ? t("multi.cityProgress", { city: city(seg) }) : undefined} />
-        ) : booking ? (
+        {bookingsFor(seg).length > 0 ? (
+          <>
+            {bookingsFor(seg).map((b) =>
+              itineraries[b.id] ? (
+                <ItineraryView key={b.id} itinerary={itineraries[b.id]} onChange={onItinerary} role="tourist"
+                  progressTitle={multi ? t("multi.cityProgress", { city: city(seg) }) : undefined} />
+                      ) : booking ? (
           <BookingList bookings={[booking]} viewer="tourist" onChange={reload} />
         ) : parts.length > 0 ? (
           <>
@@ -168,7 +199,11 @@ export default function TeamTripPage() {
             <CoveragePlanner segmentId={seg.id} onBooked={reload}
               title={t("teamtrip.stillOpen", { defaultValue: "Guides for the days still open" })} />
           </>
+              ))}
+            {hasGaps(seg) && <CoveragePlanner segmentId={seg.id} onBooked={() => { load().catch(() => setFailed(true)); }} />}
+          </>
         ) : (
+
           <>
             {turnedDown(seg).length > 0 && <p className="notice check">{t("teamtrip.again")}</p>}
             <h2>{t("teamtrip.guidesFor", { city: city(seg) })}</h2>
@@ -176,33 +211,17 @@ export default function TeamTripPage() {
             {!found || found.items.length === 0 ? (
               <p>{t("teamtrip.none")}</p>
             ) : (
-              <>
-              {/* Guides who can be booked come first, each group by match score: a high score is no use if the
-                  Request button is off. Guides free on only some days are listed after, under their own heading. */}
-              {[false, true].map((later) => {
-                const group = found.items
-                  .filter((m) => isPartly(m) === later)
-                  .sort((a, b) => b.total_score - a.total_score);
-                if (group.length === 0) return null;
-                return (
-              <div key={String(later)}>
-              {later && <h3 className="guides-split">{t("teamtrip.someDays", { count: group.length })}</h3>}
               <ol className="guides">
-                {group.map((m) => {
+                {found.items.map((m) => {
                   const partly = m.breakdown.find((f) => f.factor === "availability" && f.score < 1);
                   return (
                     <li key={m.guide.id} className="teamguide">
                       <div className="who">
-                        <div className="whohead">
-                          <Avatar name={m.guide.full_name} photo={m.guide.photo_url} size="lg" />
-                          <div>
                         <h3>{m.guide.full_name}{m.guide.verified && <span className="sampletag">{t("teamtrip.verified")}</span>}</h3>
                         <p className="muted">
                           {m.guide.languages.map((l) => t(`lang.${l}`)).join(", ")} · {m.guide.rating_count
                             ? `★ ${m.guide.rating_average.toFixed(1)} (${m.guide.rating_count} ${t("results.reviews")})` : t("results.newGuide")}
                         </p>
-                          </div>
-                        </div>
                         <p className="price">₩{m.estimated_price.toLocaleString()} <small>{t(seg.service_type === "MICRO" ? "teamtrip.forSession" : "teamtrip.forStay")}</small></p>
                         <ul className="reasons">
                           {m.breakdown.map((f) => (
@@ -214,14 +233,9 @@ export default function TeamTripPage() {
                         </ul>
                         {partly && <p className="warn">{t("teamtrip.partly")}</p>}
                         {partly && (() => {
-                          const key = `${seg.id}:${m.guide.id}`;
-                          const open = calFor === key;
-                          return (<>
-                            <button type="button" className="textlink" aria-expanded={open} onClick={() => setCalFor(open ? null : key)}>
-                              {t(open ? "teamtrip.hideDays" : "teamtrip.whichDays")}
-                            </button>
-                            {open && <GuideCalendar guide={m.guide} seg={seg} />}
-                          </>);
+                          const days = missing[`${seg.id}:${m.guide.id}`];
+                          if (!days) return <button type="button" className="textlink" onClick={() => showMissing(seg, m)}>{t("teamtrip.whichDays")}</button>;
+                          return <p className="muted">{days.length ? t("teamtrip.notFreeOn", { days: days.join(", ") }) : t("teamtrip.bookedElsewhere")}</p>;
                         })()}
                       </div>
                       <div className="score">
@@ -237,12 +251,7 @@ export default function TeamTripPage() {
                   );
                 })}
               </ol>
-              </div>
-                );
-              })}
-              </>
             )}
-            {seg.service_type !== "MICRO" && <CoveragePlanner key={seg.id} segmentId={seg.id} onBooked={reload} />}
             {found && found.excluded.length > 0 && (
               <details className="excluded">
                 <summary>{t("teamtrip.excluded", { count: found.excluded.length })}</summary>

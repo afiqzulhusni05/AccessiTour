@@ -227,8 +227,7 @@ export interface Booking {
   /** Set for a booking made in the team API: the trip segment it is for, and the guide's quoted fee. */
   team?: {
     trip_id: number; segment_id: number; total_price: number;
-    start_date: string; end_date: string; // the days this booking covers (can be part of the segment)
-    status: string; // the team API's own status (REQUESTED … CONFIRMED, COMPLETED), finer than `status`
+    start_date: string; end_date: string; // the days this booking covers (can be part of the segment)    status: string; // the team API's own status (REQUESTED … CONFIRMED, COMPLETED), finer than `status`
     hours: string | null; // "10:00–14:00" for a short session
     paid_at: string | null; // when the tourist paid (demo payment)
   };

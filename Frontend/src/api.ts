@@ -166,7 +166,6 @@ export const requestTeamBookingForDays = (segmentId: number, guideId: number, st
 export const getCoveragePlan = (segmentId: number) => authed((tok) => team.coveragePlan(tok, segmentId));
 export const getConnectingOptions = (segmentId: number) => authed((tok) => team.connectingOptions(tok, segmentId));
 
-
 // ---------- itineraries
 // The team API stores dates and start/end times; the screens think in trip days, a start time and a visit length.
 
