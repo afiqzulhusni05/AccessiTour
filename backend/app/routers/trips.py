@@ -6,12 +6,23 @@ from sqlalchemy.orm import Session
 
 from app.database import get_db
 from app.deps import require_tourist
-from app.matching import SegmentRequest, TouristNeeds, combine_whole_trip, match_guides, plan_coverage
+from app.matching import (
+    SegmentRequest,
+    TouristNeeds,
+    combine_whole_trip,
+    connecting_options,
+    match_guides,
+    plan_coverage,
+)
 from app.deletion_rules import trip_delete_problem
 from app.models import Booking, Tourist, Trip, TripSegment, User
 from app.enums import BookingStatus, ServiceType
 from app.routers.matching import BLOCKING_STATUSES, load_guides, summary
 from app.schemas.matching import (
+    ConnectingLegRead,
+    ConnectingLegWithAlternatives,
+    ConnectingOptionsResponse,
+    ConnectingPlanRead,
     CoverageBlockRead,
     CoverageOptionRead,
     CoveragePlanResponse,
@@ -273,6 +284,78 @@ def segment_coverage_plan(
                 ],
             )
             for b in plan.blocks
+        ],
+    )
+
+def segment_taken_days(db: Session, segment: TripSegment) -> set[dt.date]:
+    """Days of this segment that an active booking (requested or later) already covers."""
+    taken: set[dt.date] = set()
+    active = (BookingStatus.REQUESTED, *BLOCKING_STATUSES)
+    for b in db.scalars(
+        select(Booking).where(Booking.segment_id == segment.id, Booking.status.in_(active))
+    ):
+        day = b.start_date
+        while day <= b.end_date:
+            taken.add(day)
+            day += dt.timedelta(days=1)
+    return taken
+
+
+@router.get("/segments/{segment_id}/connecting-options", response_model=ConnectingOptionsResponse)
+def segment_connecting_options(
+    segment_id: int, user: User = Depends(require_tourist), db: Session = Depends(get_db)
+):
+    """Like transit flights: ways to share a multi-day segment between several guides.
+
+    Guides free on every day are the direct options in /trips/{trip_id}/matches and are
+    not repeated here. Show these below them. Each leg is booked on its own with
+    POST /bookings (segment_id, guide_id, start_date, end_date).
+    """
+    tourist = get_tourist(db, user)
+    segment = db.get(TripSegment, segment_id)
+    if segment is None or db.get(Trip, segment.trip_id).tourist_id != tourist.id:
+        raise HTTPException(status_code=404, detail="Trip segment not found")
+    if segment.service_type == ServiceType.MICRO or segment.start_date == segment.end_date:
+        return ConnectingOptionsResponse(segment_id=segment.id, options=[])
+
+    needs = TouristNeeds(
+        preferred_language=tourist.preferred_language.value,
+        languages=tourist.languages,
+        mobility_level=tourist.mobility_level,
+        gender_preference=tourist.gender_preference,
+    )
+    request = to_segment_request(segment)
+    candidates, guides_by_id = load_guides(db, segment.start_date, segment.end_date)
+    results, _ = match_guides(needs, request, candidates)
+    plans = connecting_options(needs, request, results, skip_days=segment_taken_days(db, segment))
+
+    def leg_read(leg) -> dict:
+        return dict(
+            guide=summary(*guides_by_id[leg.guide.id]),
+            start_date=leg.start_date,
+            end_date=leg.end_date,
+            days=leg.days,
+            total_score=leg.score,
+            price=leg.price,
+        )
+
+    return ConnectingOptionsResponse(
+        segment_id=segment.id,
+        options=[
+            ConnectingPlanRead(
+                changes=p.changes,
+                uncovered_days=p.uncovered_days,
+                average_score=p.average_score,
+                total_price=p.total_price,
+                legs=[
+                    ConnectingLegWithAlternatives(
+                        **leg_read(leg),
+                        alternatives=[ConnectingLegRead(**leg_read(a)) for a in leg.alternatives],
+                    )
+                    for leg in p.legs
+                ],
+            )
+            for p in plans
         ],
     )
 

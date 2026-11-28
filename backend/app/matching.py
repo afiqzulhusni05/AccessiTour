@@ -472,6 +472,147 @@ def plan_coverage(
         total_price=sum(b.options[0].price for b in blocks),
     )
 
+# ---------- Connecting options (mixture of guide) ----------
+#
+# Guides free on every day are the "direct" options and stay at the top of the normal
+# match list. When the stay is long, a mix of guides can still cover it, the way a
+# transit flight still gets you there. connecting_options() suggests a few such mixes.
+
+MAX_GUIDES_PER_PLAN = 4  # more handovers than this is too tiring for the tourist
+CONNECTING_BRANCH = 4  # guides tried at each handover (keeps the search fast)
+CONNECTING_LIMIT = 3  # options returned
+CONNECTING_ALTERNATIVES = 3  # other guides shown for each leg
+
+
+@dataclass
+class ConnectingLeg:
+    guide: GuideCandidate
+    start_date: dt.date
+    end_date: dt.date
+    score: float  # the guide scored for this leg only, so being busy on other days costs nothing
+    price: int
+    alternatives: list["ConnectingLeg"] = field(default_factory=list)  # other guides free for the same days
+
+    @property
+    def days(self) -> int:
+        return (self.end_date - self.start_date).days + 1
+
+
+@dataclass
+class ConnectingPlan:
+    legs: list[ConnectingLeg]
+    uncovered_days: list[dt.date]
+    total_price: int
+    average_score: float  # weighted by days, so a 7-day leg counts more than a 1-day leg
+
+    @property
+    def changes(self) -> int:
+        return len(self.legs) - 1
+
+
+def connecting_options(
+    tourist: TouristNeeds,
+    segment: SegmentRequest,
+    results: list[MatchResult],
+    skip_days: set[dt.date] | None = None,
+    limit: int = CONNECTING_LIMIT,
+) -> list[ConnectingPlan]:
+    """A few ways to cover a multi-day FULL_DAY segment with several guides.
+
+    `results` is match_guides() output. Each leg gives one guide an unbroken run of
+    days. Plans are ranked like flight results: fewest uncovered days, then fewest
+    guide changes, then best average score, then lowest price. Single-guide plans
+    are left out, because those guides are already the direct options.
+    Days in skip_days are already booked and are left out.
+    """
+    skip = skip_days or set()
+    days = segment.days()
+    by_id = {r.guide.id: r for r in results}
+    free = {r.guide.id: set(free_days(r.guide, segment)) - skip for r in results}
+
+    # 1. Search: from the first day still open, try the few guides with the longest runs.
+    raw: list[tuple[list[tuple[int, int, int]], list[dt.date]]] = []  # (guide id, first, last day index)
+
+    def run_length(guide_id: int, i: int) -> int:
+        run = 0
+        while i + run < len(days) and days[i + run] in free[guide_id]:
+            run += 1
+        return run
+
+    def search(i: int, legs: list[tuple[int, int, int]], uncovered: list[dt.date]) -> None:
+        while i < len(days) and days[i] in skip:
+            i += 1
+        if i == len(days):
+            if legs:
+                raw.append((legs, uncovered))
+            return
+        options = [(gid, run_length(gid, i)) for gid in free]
+        options = [(gid, run) for gid, run in options if run > 0]
+        if not options:  # nobody can take this day
+            search(i + 1, legs, uncovered + [days[i]])
+            return
+        if len(legs) == MAX_GUIDES_PER_PLAN:
+            return
+        options.sort(key=lambda o: (-o[1], -by_id[o[0]].total_score, o[0]))
+        for gid, run in options[:CONNECTING_BRANCH]:
+            if legs and legs[-1][0] == gid:
+                continue  # same guide again straight away is just a longer run
+            search(i + run, legs + [(gid, i, i + run - 1)], uncovered)
+
+    search(0, [], [])
+
+    # 2. Score each distinct plan, rescoring every leg on its own days and budget share.
+    leg_cache: dict[tuple[int, int, int], ConnectingLeg] = {}
+
+    def leg(gid: int, first: int, last: int) -> ConnectingLeg:
+        key = (gid, first, last)
+        if key not in leg_cache:
+            budget = None
+            if segment.budget is not None:
+                budget = round(segment.budget * (last - first + 1) / len(days))
+            part = replace(segment, start_date=days[first], end_date=days[last], budget=budget)
+            scored, _ = match_guides(tourist, part, [by_id[gid].guide])
+            leg_cache[key] = ConnectingLeg(
+                guide=by_id[gid].guide,
+                start_date=days[first],
+                end_date=days[last],
+                score=scored[0].total_score,
+                price=scored[0].estimated_price,
+            )
+        return leg_cache[key]
+
+    # Plans that split the dates the same way are one option: keep its best guides,
+    # and offer the other guides who are free for a leg as alternatives for it.
+    plans: dict[tuple, tuple[ConnectingPlan, list[tuple[int, int, int]]]] = {}
+    for legs, uncovered in raw:
+        if len(legs) == 1 and not uncovered:
+            continue  # a direct option
+        built = [replace(leg(*l)) for l in legs]  # copies: alternatives are set on them below
+        covered = sum(l.days for l in built)
+        plan = ConnectingPlan(
+            legs=built,
+            uncovered_days=uncovered,
+            total_price=sum(l.price for l in built),
+            average_score=round(sum(l.score * l.days for l in built) / covered, 1),
+        )
+        split = tuple((first, last) for _, first, last in legs)
+        best = plans.get(split)
+        if best is None or (-plan.average_score, plan.total_price) < (-best[0].average_score, best[0].total_price):
+            plans[split] = (plan, legs)
+
+    ranked = sorted(
+        plans.values(),
+        key=lambda p: (len(p[0].uncovered_days), p[0].changes, -p[0].average_score, p[0].total_price),
+    )[:limit]
+
+    for plan, legs in ranked:
+        for built, (gid, first, last) in zip(plan.legs, legs):
+            leg_days = set(days[first : last + 1])
+            others = [leg(other, first, last) for other in free if other != gid and leg_days <= free[other]]
+            others.sort(key=lambda l: (-l.score, l.price, l.guide.id))
+            built.alternatives = others[:CONNECTING_ALTERNATIVES]
+    return [plan for plan, _ in ranked]
+
 
 # ---------- Bookings ----------
 

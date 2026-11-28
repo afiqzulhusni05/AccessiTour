@@ -109,3 +109,30 @@ class CoveragePlanResponse(BaseModel):
     blocks: list[CoverageBlockRead]
     uncovered_days: list[dt.date]
     total_price: int
+
+
+
+class ConnectingLegRead(BaseModel):
+    guide: GuideSummary
+    start_date: dt.date
+    end_date: dt.date
+    days: int
+    total_score: float  # scored on this leg's days only
+    price: int
+
+
+class ConnectingLegWithAlternatives(ConnectingLegRead):
+    alternatives: list[ConnectingLegRead]  # other guides free for the same days
+
+
+class ConnectingPlanRead(BaseModel):
+    changes: int  # guide handovers, like stops on a transit flight
+    legs: list[ConnectingLegWithAlternatives]
+    uncovered_days: list[dt.date]
+    average_score: float
+    total_price: int
+
+
+class ConnectingOptionsResponse(BaseModel):
+    segment_id: int
+    options: list[ConnectingPlanRead]  # best first; guides free on every day are not repeated here
