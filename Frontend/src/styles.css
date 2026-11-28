@@ -924,3 +924,10 @@ a.whoami:focus-visible { outline: 3px solid var(--harbor); outline-offset: 2px; 
   .recs li { grid-template-columns: auto minmax(0, 1fr); }
   .recs li > .ghost { grid-column: 2; justify-self: start; }
 }
+
+/* Mix of guides for a long stay (CoveragePlanner): each leg reads like one flight of a transit trip */
+.connecting .legs { list-style: none; padding: 0; margin: 0.5rem 0; display: grid; gap: 0.6rem; }
+.connecting .leg { border-left: 3px solid #1f5fa8; padding-left: 0.7rem; }
+.connecting .leg p { margin: 0.1rem 0; }
+.connecting .leg .whohead { align-items: center; gap: 0.6rem; }
+.connecting .leg select { max-width: 100%; }

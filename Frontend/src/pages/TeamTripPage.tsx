@@ -10,6 +10,7 @@ import * as team from "../teamApi";
 import TripProgress from "../TripProgress";
 import Avatar from "../Avatar";
 import GuideCalendar from "../GuideCalendar";
+import CoveragePlanner from "../CoveragePlanner";
 import type { Booking, Itinerary } from "../types";
 
 /** The guide isn't free on every day of the stay, so they can't be requested for it. */
@@ -65,7 +66,17 @@ export default function TeamTripPage() {
     [...bookings].sort((a, b) => b.id - a.id).find((b) => b.team?.segment_id === s.id && OPEN.includes(b.status));
   const turnedDown = (s: team.TeamSegment) =>
     bookings.filter((b) => b.team?.segment_id === s.id && (b.status === "declined" || b.status === "cancelled"));
-  const allItems = trip.segments.flatMap((s) => { const b = bookingFor(s); return (b && itineraries[b.id]?.items) || []; });
+  /** Every open booking for a segment, by date: a long stay can be shared between guides. */
+  const bookingsFor = (s: team.TeamSegment) =>
+    bookings.filter((b) => b.team?.segment_id === s.id && OPEN.includes(b.status))
+      .sort((a, b) => a.team!.start_date.localeCompare(b.team!.start_date));
+  /** One booking that takes the whole segment (the usual case). */
+  const wholeBooking = (s: team.TeamSegment) => {
+    const open = bookingsFor(s);
+    return open.length === 1 && open[0].team!.start_date <= s.start_date && open[0].team!.end_date >= s.end_date
+      ? open[0] : undefined;
+  };
+  const allItems = trip.segments.flatMap((s) => bookingsFor(s).flatMap((b) => itineraries[b.id]?.items ?? []));
 
   const request = async (s: team.TeamSegment, m: team.TeamMatch) => {
     setBusy(m.guide.id);
@@ -89,8 +100,10 @@ export default function TeamTripPage() {
 
   const shortDate = (d: string) => new Date(`${d}T00:00`).toLocaleDateString(i18n.language, { month: "short", day: "numeric" });
   const seg = trip.segments[tab];
-  const booking = bookingFor(seg);
+  const booking = wholeBooking(seg);
   const itinerary = booking ? itineraries[booking.id] : undefined;
+  const parts = booking ? [] : bookingsFor(seg); // booked in parts, by several guides
+  const reload = () => { load().catch(() => setFailed(true)); };
   const found = matches[seg.id];
   const multi = trip.segments.length > 1;
 
@@ -143,7 +156,18 @@ export default function TeamTripPage() {
           <ItineraryView key={itinerary.id} itinerary={itinerary} onChange={onItinerary} role="tourist"
             progressTitle={multi ? t("multi.cityProgress", { city: city(seg) }) : undefined} />
         ) : booking ? (
-          <BookingList bookings={[booking]} viewer="tourist" onChange={() => { load().catch(() => setFailed(true)); }} />
+          <BookingList bookings={[booking]} viewer="tourist" onChange={reload} />
+        ) : parts.length > 0 ? (
+          <>
+            {parts.map((b) => itineraries[b.id] ? (
+              <ItineraryView key={b.id} itinerary={itineraries[b.id]} onChange={onItinerary} role="tourist" />
+            ) : (
+              <BookingList key={b.id} bookings={[b]} viewer="tourist" onChange={reload} />
+            ))}
+            {/* the backend leaves out days already booked, so this offers only the days still open */}
+            <CoveragePlanner segmentId={seg.id} onBooked={reload}
+              title={t("teamtrip.stillOpen", { defaultValue: "Guides for the days still open" })} />
+          </>
         ) : (
           <>
             {turnedDown(seg).length > 0 && <p className="notice check">{t("teamtrip.again")}</p>}
@@ -218,6 +242,7 @@ export default function TeamTripPage() {
               })}
               </>
             )}
+            {seg.service_type !== "MICRO" && <CoveragePlanner key={seg.id} segmentId={seg.id} onBooked={reload} />}
             {found && found.excluded.length > 0 && (
               <details className="excluded">
                 <summary>{t("teamtrip.excluded", { count: found.excluded.length })}</summary>

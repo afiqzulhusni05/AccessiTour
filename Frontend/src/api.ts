@@ -142,6 +142,7 @@ async function toBooking(tok: string, b: team.TeamBooking): Promise<Booking> {
     score: null, created_at: b.created_at, itinerary_id: itineraryId,
     team: {
       trip_id: b.trip_id, segment_id: b.segment_id, total_price: b.total_price, status: b.status,
+      start_date: b.start_date, end_date: b.end_date,
       hours: b.start_time && b.end_time ? `${b.start_time.slice(0, 5)}–${b.end_time.slice(0, 5)}` : null,
       paid_at: b.paid_at ?? null,
     },
@@ -163,6 +164,7 @@ export const requestTeamBooking = (segmentId: number, guideId: number) =>
 export const requestTeamBookingForDays = (segmentId: number, guideId: number, start: string, end: string) =>
   authed(async (tok) => toBooking(tok, await team.createPartBooking(tok, segmentId, guideId, start, end)));
 export const getCoveragePlan = (segmentId: number) => authed((tok) => team.coveragePlan(tok, segmentId));
+export const getConnectingOptions = (segmentId: number) => authed((tok) => team.connectingOptions(tok, segmentId));
 
 
 // ---------- itineraries

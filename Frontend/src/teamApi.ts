@@ -291,6 +291,19 @@ export interface TeamCoveragePlan { segment_id: number; single_guide: boolean; b
 
 export const coveragePlan = (token: string, segmentId: number) =>
   call<TeamCoveragePlan>("GET", `/trips/segments/${segmentId}/coverage-plan`, token);
+/** One guide for some days of a stay. */
+export interface TeamLegOption {
+  guide: TeamGuideSummary; start_date: string; end_date: string; days: number; total_score: number; price: number;
+}
+/** The suggested guide for those days, and others free on the same days. */
+export interface TeamConnectingLeg extends TeamLegOption { alternatives: TeamLegOption[] }
+export interface TeamConnectingPlan {
+  changes: number; legs: TeamConnectingLeg[];
+  uncovered_days: string[]; average_score: number; total_price: number;
+}
+/** Ways to share a long stay between guides when nobody is free on every day. */
+export const connectingOptions = (token: string, segmentId: number) =>
+  call<{ segment_id: number; options: TeamConnectingPlan[] }>("GET", `/trips/segments/${segmentId}/connecting-options`, token);
 export const createPartBooking = (token: string, segmentId: number, guideId: number, startDate: string, endDate: string) =>
   call<TeamBooking>("POST", "/bookings", token, { segment_id: segmentId, guide_id: guideId, start_date: startDate, end_date: endDate });
 export async function myBookings(token: string): Promise<TeamBooking[]> {

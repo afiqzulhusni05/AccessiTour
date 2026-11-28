@@ -456,3 +456,89 @@ def test_coverage_reports_days_nobody_can_take():
     a = guide(1, "A", availability=full_days(NOV_3))
     plan = _plan([a], NOV_3, NOV_5)
     assert plan.uncovered_days == [NOV_4, NOV_5]
+
+
+from app.matching import connecting_options
+
+
+def _days(start, count):
+    return [start + dt.timedelta(days=i) for i in range(count)]
+
+
+def _connecting(guides, start, end, budget=None, skip=None):
+    tourist = TouristNeeds(preferred_language="en", languages=["en"])
+    seg = SegmentRequest(
+        region="BUSAN", service_type=ServiceType.FULL_DAY, start_date=start, end_date=end, budget=budget
+    )
+    results, _ = match_guides(tourist, seg, guides)
+    return connecting_options(tourist, seg, results, skip_days=skip)
+
+
+def _legs(plan):
+    return [(l.guide.id, l.start_date, l.end_date) for l in plan.legs]
+
+
+TEN = _days(dt.date(2026, 12, 1), 10)
+
+
+def test_connecting_leaves_out_direct_guides():
+    a = guide(1, "A", availability=full_days(*TEN))
+    assert _connecting([a], TEN[0], TEN[-1]) == []
+
+
+def test_connecting_splits_a_long_stay_between_guides():
+    a = guide(1, "A", availability=full_days(*TEN[:6]))
+    b = guide(2, "B", availability=full_days(*TEN[6:]))
+    [plan] = _connecting([a, b], TEN[0], TEN[-1])
+    assert _legs(plan) == [(1, TEN[0], TEN[5]), (2, TEN[6], TEN[9])]
+    assert plan.changes == 1
+    assert plan.uncovered_days == []
+    assert plan.total_price == 120000 * 10
+
+
+def test_connecting_puts_fewer_changes_first():
+    a = guide(1, "A", availability=full_days(*TEN[:5]))
+    b = guide(2, "B", availability=full_days(*TEN[5:]))
+    c = guide(3, "C", availability=full_days(*TEN[:3]), rating_average=5.0, rating_count=200)
+    d = guide(4, "D", availability=full_days(*TEN[3:5]))
+    plans = _connecting([a, b, c, d], TEN[0], TEN[-1])
+    assert _legs(plans[0]) == [(1, TEN[0], TEN[4]), (2, TEN[5], TEN[9])]
+    assert all(p.changes >= plans[0].changes for p in plans)
+
+
+def test_connecting_scores_each_leg_without_the_busy_days_penalty():
+    a = guide(1, "A", availability=full_days(*TEN[:5]))
+    b = guide(2, "B", availability=full_days(*TEN[5:]))
+    [plan] = _connecting([a, b], TEN[0], TEN[-1])
+    # Busy for half the stay, each guide alone scores lower than on their own leg
+    whole, _ = match_guides(
+        TouristNeeds(preferred_language="en", languages=["en"]),
+        SegmentRequest(region="BUSAN", service_type=ServiceType.FULL_DAY, start_date=TEN[0], end_date=TEN[-1]),
+        [a],
+    )
+    assert plan.legs[0].score > whole[0].total_score
+
+
+def test_connecting_reports_days_nobody_can_take():
+    a = guide(1, "A", availability=full_days(*TEN[:4]))
+    b = guide(2, "B", availability=full_days(*TEN[6:]))
+    [plan] = _connecting([a, b], TEN[0], TEN[-1])
+    assert plan.uncovered_days == TEN[4:6]
+
+
+def test_connecting_skips_days_already_booked():
+    a = guide(1, "A", availability=full_days(*TEN[:6]))
+    b = guide(2, "B", availability=full_days(*TEN[6:]))
+    [plan] = _connecting([a, b], TEN[0], TEN[-1], skip=set(TEN[:2]))
+    assert _legs(plan)[0] == (1, TEN[2], TEN[5])
+
+
+def test_connecting_lists_other_guides_for_a_leg():
+    a = guide(1, "A", availability=full_days(*TEN[:5]))
+    a2 = guide(5, "A2", availability=full_days(*TEN[:5]), rating_average=3.0)
+    b = guide(2, "B", availability=full_days(*TEN[5:]))
+    plans = _connecting([a, a2, b], TEN[0], TEN[-1])
+    assert len(plans) == 1  # same split of dates, so one option
+    assert plans[0].legs[0].guide.id == 1  # better score suggested first
+    assert [l.guide.id for l in plans[0].legs[0].alternatives] == [5]
+    assert plans[0].legs[1].alternatives == []
