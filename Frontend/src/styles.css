@@ -931,5 +931,3 @@ a.whoami:focus-visible { outline: 3px solid var(--harbor); outline-offset: 2px; 
 .connecting .leg p { margin: 0.1rem 0; }
 .connecting .leg .whohead { align-items: center; gap: 0.6rem; }
 .connecting .leg select { max-width: 100%; }
-
-
